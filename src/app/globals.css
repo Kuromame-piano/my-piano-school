@@ -69,3 +69,72 @@ select:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
 }
+
+/* Mobile Touch Improvements */
+@media (max-width: 768px) {
+
+    /* Better touch targets */
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        min-height: 44px;
+    }
+
+    /* Improved scrollbar for mobile */
+    ::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    /* Prevent horizontal overflow */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Modal responsive adjustments */
+    .mobile-modal {
+        max-height: 85vh !important;
+        margin: 0.5rem;
+    }
+
+    /* Touch-friendly slider */
+    input[type="range"] {
+        height: 8px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* Safe area for mobile notch/home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Prevent text selection on touch */
+.no-select {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Hide scrollbar but allow scrolling */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Smooth scroll on mobile */
+@media (max-width: 768px) {
+    html {
+        scroll-behavior: smooth;
+    }
+}
