@@ -15,6 +15,7 @@ export default function SheetMusicView() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingMusic, setEditingMusic] = useState<SheetMusic | null>(null);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -48,23 +49,29 @@ export default function SheetMusicView() {
 
     const handleSaveMusic = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        if (isSaving) return;
+        setIsSaving(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        const musicData: SheetMusic = {
-            id: editingMusic ? editingMusic.id : Date.now(),
-            title: formData.get("title") as string,
-            composer: formData.get("composer") as string,
-            difficulty: parseInt(formData.get("difficulty") as string),
-            genre: formData.get("genre") as string,
-            pdfUrl: formData.get("pdfUrl") as string,
-            notes: formData.get("notes") as string,
-        };
+            const musicData: SheetMusic = {
+                id: editingMusic ? editingMusic.id : Date.now(),
+                title: formData.get("title") as string,
+                composer: formData.get("composer") as string,
+                difficulty: parseInt(formData.get("difficulty") as string),
+                genre: formData.get("genre") as string,
+                pdfUrl: formData.get("pdfUrl") as string,
+                notes: formData.get("notes") as string,
+            };
 
-        await saveSheetMusic(musicData);
-        await loadData();
-        setIsAddModalOpen(false);
-        setEditingMusic(null);
+            await saveSheetMusic(musicData);
+            await loadData();
+            setIsAddModalOpen(false);
+            setEditingMusic(null);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDeleteMusic = async (musicId: number) => {
@@ -76,16 +83,21 @@ export default function SheetMusicView() {
 
     const handleAssign = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!selectedMusic) return;
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
-        const studentId = parseInt(formData.get("studentId") as string);
-        const student = students.find((s) => s.id === studentId);
-        if (!student) return;
+        if (!selectedMusic || isSaving) return;
+        setIsSaving(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
+            const studentId = parseInt(formData.get("studentId") as string);
+            const student = students.find((s) => s.id === studentId);
+            if (!student) return;
 
-        await assignToStudent(selectedMusic.id, studentId, student.name);
-        await loadAssignments(selectedMusic.id);
-        setIsAssignModalOpen(false);
+            await assignToStudent(selectedMusic.id, studentId, student.name);
+            await loadAssignments(selectedMusic.id);
+            setIsAssignModalOpen(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleRemoveAssignment = async (studentId: number) => {
@@ -248,7 +260,7 @@ export default function SheetMusicView() {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">メモ</label>
                                 <textarea name="notes" rows={2} defaultValue={editingMusic?.notes} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="練習ポイントなど..." />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">{editingMusic ? "更新する" : "追加する"}</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingMusic ? "更新する" : "追加する")}</button>
                         </form>
                     </div>
                 </div>
@@ -272,7 +284,7 @@ export default function SheetMusicView() {
                                     }
                                 </select>
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">割り当てる</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "割り当てる"}</button>
                         </form>
                     </div>
                 </div>

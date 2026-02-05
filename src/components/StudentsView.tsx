@@ -100,6 +100,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     const [textbooks, setTextbooks] = useState<Textbook[]>([]);
     const [textbookProgress, setTextbookProgress] = useState<(TextbookProgress & { textbookTitle: string; totalPages: number })[]>([]);
     const [isAddTextbookModalOpen, setIsAddTextbookModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const filteredStudents = students.filter((s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -134,24 +135,29 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     const handleSaveTextbookProgress = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!selectedStudent) return;
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        if (!selectedStudent || isSaving) return;
+        setIsSaving(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        const textbookId = Number(formData.get("textbookId"));
-        const currentPage = Number(formData.get("currentPage"));
+            const textbookId = Number(formData.get("textbookId"));
+            const currentPage = Number(formData.get("currentPage"));
 
-        await saveTextbookProgress({
-            studentId: selectedStudent.id,
-            textbookId,
-            status: "in_progress",
-            currentPage,
-            startDate: new Date().toISOString(),
-            lastUpdated: new Date().toISOString(),
-        });
+            await saveTextbookProgress({
+                studentId: selectedStudent.id,
+                textbookId,
+                status: "in_progress",
+                currentPage,
+                startDate: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+            });
 
-        await loadTextbookData(selectedStudent.id);
-        setIsAddTextbookModalOpen(false);
+            await loadTextbookData(selectedStudent.id);
+            setIsAddTextbookModalOpen(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleUpdateProgress = async (studentId: number, pieceId: number, progress: number) => {
@@ -205,40 +211,45 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     const handleAddPieceSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!addingPieceForStudentId) return;
+        if (!addingPieceForStudentId || isSaving) return;
+        setIsSaving(true);
 
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
-        const title = formData.get("title") as string;
-        const coverImage = formData.get("coverImage") as string;
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
+            const title = formData.get("title") as string;
+            const coverImage = formData.get("coverImage") as string;
 
-        const newPiece = {
-            id: Date.now(),
-            title,
-            progress: 0,
-            status: "active" as const,
-            startedAt: new Date().toLocaleDateString("ja-JP"),
-            coverImage: coverImage || undefined,
-        };
-        let updatedStudent: Student | undefined;
+            const newPiece = {
+                id: Date.now(),
+                title,
+                progress: 0,
+                status: "active" as const,
+                startedAt: new Date().toLocaleDateString("ja-JP"),
+                coverImage: coverImage || undefined,
+            };
+            let updatedStudent: Student | undefined;
 
-        setStudents((prev) =>
-            prev.map((s) => {
-                if (s.id === addingPieceForStudentId) {
-                    updatedStudent = { ...s, pieces: [newPiece, ...s.pieces] };
-                    return updatedStudent;
-                }
-                return s;
-            })
-        );
+            setStudents((prev) =>
+                prev.map((s) => {
+                    if (s.id === addingPieceForStudentId) {
+                        updatedStudent = { ...s, pieces: [newPiece, ...s.pieces] };
+                        return updatedStudent;
+                    }
+                    return s;
+                })
+            );
 
-        if (selectedStudent?.id === addingPieceForStudentId) {
-            setSelectedStudent((prev) => (prev ? { ...prev, pieces: [newPiece, ...prev.pieces] } : null));
+            if (selectedStudent?.id === addingPieceForStudentId) {
+                setSelectedStudent((prev) => (prev ? { ...prev, pieces: [newPiece, ...prev.pieces] } : null));
+            }
+
+            if (updatedStudent) await saveStudent(updatedStudent);
+            setIsAddPieceModalOpen(false);
+            setAddingPieceForStudentId(null);
+        } finally {
+            setIsSaving(false);
         }
-
-        if (updatedStudent) await saveStudent(updatedStudent);
-        setIsAddPieceModalOpen(false);
-        setAddingPieceForStudentId(null);
     };
 
     const handleArchiveStudent = async (studentId: number, archive: boolean) => {
@@ -249,19 +260,24 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     const handleAddLessonNote = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!selectedStudent) return;
+        if (!selectedStudent || isSaving) return;
+        setIsSaving(true);
 
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        await addLessonNote(selectedStudent.id, {
-            date: formData.get("date") as string,
-            content: formData.get("content") as string,
-            pieces: [],
-        });
+            await addLessonNote(selectedStudent.id, {
+                date: formData.get("date") as string,
+                content: formData.get("content") as string,
+                pieces: [],
+            });
 
-        await loadLessonNotes(selectedStudent.id);
-        setIsAddNoteModalOpen(false);
+            await loadLessonNotes(selectedStudent.id);
+            setIsAddNoteModalOpen(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDeleteNote = async (noteId: number) => {
@@ -534,31 +550,37 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingStudent ? "生徒情報を編集" : "新規生徒の登録"}</h3>
                         <form onSubmit={async (e) => {
                             e.preventDefault();
-                            const form = e.target as HTMLFormElement;
-                            const formData = new FormData(form);
-                            const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
+                            if (isSaving) return;
+                            setIsSaving(true);
+                            try {
+                                const form = e.target as HTMLFormElement;
+                                const formData = new FormData(form);
+                                const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
 
-                            const newStudentData: Student = {
-                                id: editingStudent ? editingStudent.id : Date.now(),
-                                name: formData.get("name") as string,
-                                phone: formData.get("phone") as string,
-                                email: formData.get("email") as string,
-                                address: formData.get("address") as string,
-                                lessonDay: formData.get("lessonDay") as string,
-                                birthDate: formData.get("birthDate") as string,
-                                parentName: formData.get("parentName") as string,
-                                parentPhone: formData.get("parentPhone") as string,
-                                memo: formData.get("memo") as string,
-                                color: editingStudent ? editingStudent.color : colors[Math.floor(Math.random() * colors.length)],
-                                pieces: editingStudent ? editingStudent.pieces : [],
-                                archived: editingStudent?.archived || false,
-                            };
+                                const newStudentData: Student = {
+                                    id: editingStudent ? editingStudent.id : Date.now(),
+                                    name: formData.get("name") as string,
+                                    phone: formData.get("phone") as string,
+                                    email: formData.get("email") as string,
+                                    address: formData.get("address") as string,
+                                    lessonDay: formData.get("lessonDay") as string,
+                                    birthDate: formData.get("birthDate") as string,
+                                    parentName: formData.get("parentName") as string,
+                                    parentPhone: formData.get("parentPhone") as string,
+                                    memo: formData.get("memo") as string,
+                                    color: editingStudent ? editingStudent.color : colors[Math.floor(Math.random() * colors.length)],
+                                    pieces: editingStudent ? editingStudent.pieces : [],
+                                    archived: editingStudent?.archived || false,
+                                };
 
-                            await saveStudent(newStudentData);
-                            await loadStudents();
-                            if (selectedStudent?.id === newStudentData.id) setSelectedStudent(newStudentData);
-                            setIsAddModalOpen(false);
-                            setEditingStudent(null);
+                                await saveStudent(newStudentData);
+                                await loadStudents();
+                                if (selectedStudent?.id === newStudentData.id) setSelectedStudent(newStudentData);
+                                setIsAddModalOpen(false);
+                                setEditingStudent(null);
+                            } finally {
+                                setIsSaving(false);
+                            }
                         }} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-4">
@@ -580,7 +602,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">メモ (特記事項など)</label>
                                 <textarea name="memo" defaultValue={editingStudent?.memo} rows={3} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 発表会への参加希望、苦手な音階など" />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg hover:shadow-xl mt-6">{editingStudent ? "更新する" : "登録する"}</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg hover:shadow-xl mt-6 ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingStudent ? "更新する" : "登録する")}</button>
                         </form>
                     </div>
                 </div>
@@ -602,7 +624,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">レッスン内容・メモ</label>
                                 <textarea name="content" rows={5} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="今日のレッスン内容、注意点、次回への課題など..." />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">保存する</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "保存する"}</button>
                         </form>
                     </div>
                 </div>
@@ -624,7 +646,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">カバー画像URL（任意）</label>
                                 <input name="coverImage" type="url" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="https://..." />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">追加する</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
                     </div>
                 </div>
@@ -649,7 +671,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">現在のページ</label>
                                 <input name="currentPage" type="number" min="0" defaultValue="0" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">追加する</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
                     </div>
                 </div>

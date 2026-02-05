@@ -23,6 +23,7 @@ export default function ReportsView() {
     // Template editing
     const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     // History
     const [reportHistory, setReportHistory] = useState<ReportHistory[]>([]);
@@ -138,23 +139,29 @@ export default function ReportsView() {
 
     const handleSaveTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        if (isSaving) return;
+        setIsSaving(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        const templateData = {
-            label: formData.get("label") as string,
-            text: formData.get("text") as string,
-        };
+            const templateData = {
+                label: formData.get("label") as string,
+                text: formData.get("text") as string,
+            };
 
-        if (editingTemplate && editingTemplate.isCustom) {
-            await updateTemplate({ ...editingTemplate, ...templateData });
-        } else {
-            await saveTemplate(templateData);
+            if (editingTemplate && editingTemplate.isCustom) {
+                await updateTemplate({ ...editingTemplate, ...templateData });
+            } else {
+                await saveTemplate(templateData);
+            }
+
+            await loadData();
+            setIsTemplateModalOpen(false);
+            setEditingTemplate(null);
+        } finally {
+            setIsSaving(false);
         }
-
-        await loadData();
-        setIsTemplateModalOpen(false);
-        setEditingTemplate(null);
     };
 
     const handleDeleteTemplate = async (templateId: number) => {
@@ -587,7 +594,7 @@ export default function ReportsView() {
                                 <textarea name="text" rows={8} required defaultValue={editingTemplate?.text} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="利用可能な変数: {曲名}, {良かった点}, {次回の目標}, {アドバイス}" />
                                 <p className="text-xs text-slate-500 mt-2">変数: {"{曲名}"}, {"{良かった点}"}, {"{次回の目標}"}, {"{アドバイス}"}</p>
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">{editingTemplate ? "更新する" : "保存する"}</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingTemplate ? "更新する" : "保存する")}</button>
                         </form>
                     </div>
                 </div>

@@ -46,6 +46,7 @@ export default function RecitalView() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingRecital, setEditingRecital] = useState<Recital | null>(null);
     const [isAddParticipantModalOpen, setIsAddParticipantModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -64,22 +65,28 @@ export default function RecitalView() {
 
     const handleSaveRecital = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        if (isSaving) return;
+        setIsSaving(true);
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        const recitalData: Recital = {
-            id: editingRecital ? editingRecital.id : Date.now(),
-            name: formData.get("name") as string,
-            date: formData.get("date") as string,
-            location: formData.get("location") as string,
-            description: formData.get("description") as string,
-            participants: editingRecital ? editingRecital.participants : [],
-        };
+            const recitalData: Recital = {
+                id: editingRecital ? editingRecital.id : Date.now(),
+                name: formData.get("name") as string,
+                date: formData.get("date") as string,
+                location: formData.get("location") as string,
+                description: formData.get("description") as string,
+                participants: editingRecital ? editingRecital.participants : [],
+            };
 
-        await saveRecital(recitalData);
-        await loadData();
-        setIsAddModalOpen(false);
-        setEditingRecital(null);
+            await saveRecital(recitalData);
+            await loadData();
+            setIsAddModalOpen(false);
+            setEditingRecital(null);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleDeleteRecital = async (recitalId: number) => {
@@ -91,30 +98,35 @@ export default function RecitalView() {
 
     const handleAddParticipant = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!selectedRecital) return;
+        if (!selectedRecital || isSaving) return;
+        setIsSaving(true);
 
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
-        const studentId = parseInt(formData.get("studentId") as string);
-        const student = students.find((s) => s.id === studentId);
-        if (!student) return;
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
+            const studentId = parseInt(formData.get("studentId") as string);
+            const student = students.find((s) => s.id === studentId);
+            if (!student) return;
 
-        const newParticipant: RecitalParticipant = {
-            studentId,
-            studentName: student.name,
-            piece: formData.get("piece") as string,
-            order: selectedRecital.participants.length + 1,
-        };
+            const newParticipant: RecitalParticipant = {
+                studentId,
+                studentName: student.name,
+                piece: formData.get("piece") as string,
+                order: selectedRecital.participants.length + 1,
+            };
 
-        const updatedRecital = {
-            ...selectedRecital,
-            participants: [...selectedRecital.participants, newParticipant],
-        };
+            const updatedRecital = {
+                ...selectedRecital,
+                participants: [...selectedRecital.participants, newParticipant],
+            };
 
-        await saveRecital(updatedRecital);
-        setSelectedRecital(updatedRecital);
-        await loadData();
-        setIsAddParticipantModalOpen(false);
+            await saveRecital(updatedRecital);
+            setSelectedRecital(updatedRecital);
+            await loadData();
+            setIsAddParticipantModalOpen(false);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleRemoveParticipant = async (studentId: number) => {
@@ -296,7 +308,7 @@ export default function RecitalView() {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">説明・メモ</label>
                                 <textarea name="description" rows={3} defaultValue={editingRecital?.description} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="発表会の詳細など..." />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">{editingRecital ? "更新する" : "作成する"}</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingRecital ? "更新する" : "作成する")}</button>
                         </form>
                     </div>
                 </div>
@@ -324,7 +336,7 @@ export default function RecitalView() {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">演奏曲 <span className="text-red-400">*</span></label>
                                 <input name="piece" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
                             </div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">追加する</button>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
                     </div>
                 </div>
