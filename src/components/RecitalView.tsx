@@ -2,8 +2,41 @@
 
 import { useState, useEffect } from "react";
 import { Plus, X, Calendar, MapPin, Music, Users, Pencil, Trash2, ChevronRight, GripVertical } from "lucide-react";
+import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { getRecitals, saveRecital, deleteRecital, Recital, RecitalParticipant } from "../actions/recitalActions";
 import { getStudents, Student } from "../actions/studentActions";
+
+// Sortable Participant Component
+function SortableParticipant({ participant, index, onRemove }: { participant: RecitalParticipant; index: number; onRemove: (id: number) => void }) {
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: participant.studentId });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl group">
+            <div {...attributes} {...listeners} className="cursor-grab hover:text-white text-slate-500">
+                <GripVertical className="w-5 h-5" />
+            </div>
+            <div className="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-300 font-bold text-sm">
+                {index + 1}
+            </div>
+            <div className="flex-1">
+                <p className="font-medium">{participant.studentName}</p>
+                <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+                    <Music className="w-3.5 h-3.5" />{participant.piece}
+                </p>
+            </div>
+            <button onClick={() => onRemove(participant.studentId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+            </button>
+        </div>
+    );
+}
 
 export default function RecitalView() {
     const [recitals, setRecitals] = useState<Recital[]>([]);
@@ -96,6 +129,28 @@ export default function RecitalView() {
         await saveRecital(updatedRecital);
         setSelectedRecital(updatedRecital);
         await loadData();
+    };
+
+    const handleDragEnd = async (event: DragEndEvent) => {
+        if (!selectedRecital) return;
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = selectedRecital.participants.findIndex((p) => p.studentId === active.id);
+            const newIndex = selectedRecital.participants.findIndex((p) => p.studentId === over.id);
+
+            const newParticipants = [...selectedRecital.participants];
+            const [moved] = newParticipants.splice(oldIndex, 1);
+            newParticipants.splice(newIndex, 0, moved);
+
+            // Update order
+            const updatedParticipants = newParticipants.map((p, i) => ({ ...p, order: i + 1 }));
+
+            const updatedRecital = { ...selectedRecital, participants: updatedParticipants };
+            setSelectedRecital(updatedRecital); // Optimistic update
+            await saveRecital(updatedRecital);
+            await loadData();
+        }
     };
 
     const formatDate = (dateStr: string) => {
@@ -198,22 +253,18 @@ export default function RecitalView() {
                                 <p className="text-center py-8 text-slate-600">参加者がまだ登録されていません</p>
                             ) : (
                                 <div className="space-y-3">
-                                    {selectedRecital.participants.sort((a, b) => a.order - b.order).map((participant, index) => (
-                                        <div key={participant.studentId} className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-xl group">
-                                            <div className="w-8 h-8 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-300 font-bold text-sm">
-                                                {index + 1}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="font-medium">{participant.studentName}</p>
-                                                <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
-                                                    <Music className="w-3.5 h-3.5" />{participant.piece}
-                                                </p>
-                                            </div>
-                                            <button onClick={() => handleRemoveParticipant(participant.studentId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
-                                                <Trash2 className="w-4 h-4 text-rose-400" />
-                                            </button>
-                                        </div>
-                                    ))}
+                                    <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                        <SortableContext items={selectedRecital.participants.map(p => p.studentId)} strategy={verticalListSortingStrategy}>
+                                            {selectedRecital.participants.map((participant, index) => (
+                                                <SortableParticipant
+                                                    key={participant.studentId}
+                                                    participant={participant}
+                                                    index={index}
+                                                    onRemove={handleRemoveParticipant}
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </DndContext>
                                 </div>
                             )}
                         </div>

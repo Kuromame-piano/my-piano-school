@@ -22,14 +22,14 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
 
     useEffect(() => {
         const fetchData = async () => {
-            const [students, transactions, events] = await Promise.all([
+            const [studentData, transactions, events] = await Promise.all([
                 getStudents(),
                 getTransactions(),
                 getLessons()
             ]);
 
             // Calculate Student Count
-            const studentCount = students.length;
+            const studentCount = studentData.length;
 
             // Calculate Monthly Income
             const now = new Date();
@@ -50,12 +50,16 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                 todayLessonsCount: todayEvents.length
             });
 
-            setTodaysLessons(todayEvents.map(e => ({
-                name: e.title, // Assuming Title is Student Name for now
-                piece: e.description || "練習曲（未設定）",
-                time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                color: "bg-violet-500" // Default color since we can't easily map back to student color without more logic
-            })));
+            setTodaysLessons(todayEvents.map(e => {
+                // Find matching student by name to get their color
+                const matchingStudent = studentData.find(s => s.name === e.title);
+                return {
+                    name: e.title, // Assuming Title is Student Name for now
+                    piece: e.description || "練習曲（未設定）",
+                    time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                    color: matchingStudent?.color || "bg-violet-500"
+                };
+            }));
         };
         fetchData();
     }, []);

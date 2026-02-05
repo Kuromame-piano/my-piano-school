@@ -23,8 +23,20 @@ export interface TuitionPayment {
     amount: number;
 }
 
+// Per-lesson payment for 都度払い
+export interface LessonPayment {
+    id: number;
+    studentId: number;
+    studentName: string;
+    lessonDate: string;
+    amount: number;
+    paid: boolean;
+    paidDate?: string;
+}
+
 const FINANCE_SHEET = "Finance";
 const TUITION_SHEET = "TuitionPayments";
+const LESSON_PAYMENTS_SHEET = "LessonPayments";
 
 // Get all transactions
 export async function getTransactions(): Promise<Transaction[]> {
@@ -295,5 +307,151 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
     } catch (error) {
         console.error("Error saving tuition payment:", error);
         return { success: false, error };
+    }
+}
+
+// ===== Lesson Payment Management (都度払い) =====
+
+// Get lesson payments for a specific month
+export async function getLessonPayments(year: number, month: number): Promise<LessonPayment[]> {
+    try {
+        const sheets = await getSheetsClient();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${LESSON_PAYMENTS_SHEET}!A2:G`,
+        });
+
+        const rows = response.data.values;
+        if (!rows) return [];
+
+        return rows
+            .filter((row) => {
+                const lessonDate = new Date(row[3]);
+                return lessonDate.getFullYear() === year && lessonDate.getMonth() + 1 === month;
+            })
+            .map((row) => ({
+                id: Number(row[0]),
+                studentId: Number(row[1]),
+                studentName: row[2] || "",
+                lessonDate: row[3] || "",
+                amount: Number(row[4]) || 0,
+                paid: row[5] === "TRUE" || row[5] === "true",
+                paidDate: row[6] || undefined,
+            }));
+    } catch (error) {
+        console.error("Error fetching lesson payments:", error);
+        return [];
+    }
+}
+
+// Save lesson payment
+export async function saveLessonPayment(payment: LessonPayment) {
+    try {
+        const sheets = await getSheetsClient();
+
+        // Check if record exists
+        const existingPayments = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${LESSON_PAYMENTS_SHEET}!A2:G`,
+        });
+
+        const rows = existingPayments.data.values || [];
+        const existingIndex = rows.findIndex((row) => Number(row[0]) === payment.id);
+
+        const rowData = [
+            payment.id,
+            payment.studentId,
+            payment.studentName,
+            payment.lessonDate,
+            payment.amount,
+            payment.paid,
+            payment.paidDate || "",
+        ];
+
+        if (existingIndex !== -1) {
+            // Update
+            const rowNumber = existingIndex + 2;
+            await sheets.spreadsheets.values.update({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${LESSON_PAYMENTS_SHEET}!A${rowNumber}:G${rowNumber}`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: {
+                    values: [rowData],
+                },
+            });
+        } else {
+            // Append
+            await sheets.spreadsheets.values.append({
+                spreadsheetId: SPREADSHEET_ID,
+                range: `${LESSON_PAYMENTS_SHEET}!A:A`,
+                valueInputOption: "USER_ENTERED",
+                requestBody: {
+                    values: [rowData],
+                },
+            });
+        }
+        return { success: true };
+    } catch (error) {
+        console.error("Error saving lesson payment:", error);
+        return { success: false, error };
+    }
+}
+
+// Get annual summary for tax reporting
+export async function getAnnualSummary(year: number): Promise<{
+    totalIncome: number;
+    totalExpense: number;
+    expenseByCategory: { category: string; amount: number }[];
+    monthlyBreakdown: { month: string; income: number; expense: number }[];
+}> {
+    try {
+        const transactions = await getTransactions();
+        const yearTransactions = transactions.filter(
+            (t) => new Date(t.date).getFullYear() === year
+        );
+
+        const totalIncome = yearTransactions
+            .filter((t) => t.type === "income")
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const totalExpense = yearTransactions
+            .filter((t) => t.type === "expense")
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        // Group expenses by category
+        const expenseMap = new Map<string, number>();
+        yearTransactions
+            .filter((t) => t.type === "expense")
+            .forEach((t) => {
+                const current = expenseMap.get(t.category) || 0;
+                expenseMap.set(t.category, current + t.amount);
+            });
+
+        const expenseByCategory = Array.from(expenseMap.entries()).map(([category, amount]) => ({
+            category,
+            amount,
+        }));
+
+        // Monthly breakdown
+        const monthlyBreakdown = Array.from({ length: 12 }, (_, i) => {
+            const monthNum = i + 1;
+            const monthTransactions = yearTransactions.filter(
+                (t) => new Date(t.date).getMonth() === i
+            );
+            return {
+                month: `${monthNum}月`,
+                income: monthTransactions
+                    .filter((t) => t.type === "income")
+                    .reduce((sum, t) => sum + t.amount, 0),
+                expense: monthTransactions
+                    .filter((t) => t.type === "expense")
+                    .reduce((sum, t) => sum + t.amount, 0),
+            };
+        });
+
+        return { totalIncome, totalExpense, expenseByCategory, monthlyBreakdown };
+    } catch (error) {
+        console.error("Error getting annual summary:", error);
+        return { totalIncome: 0, totalExpense: 0, expenseByCategory: [], monthlyBreakdown: [] };
     }
 }

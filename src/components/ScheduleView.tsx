@@ -18,6 +18,9 @@ export default function ScheduleView() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [saving, setSaving] = useState(false);
+    const [lessonDuration, setLessonDuration] = useState(45);
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
 
     const fetchEvents = async () => {
         const year = currentDate.getFullYear();
@@ -122,8 +125,40 @@ export default function ScheduleView() {
 
     const openEditModal = (event: CalendarEvent) => {
         setEditingEvent(event);
+        setStartTime(formatDateForInput(event.start));
+        setEndTime(formatDateForInput(event.end));
         setIsAddModalOpen(true);
         setSelectedEvent(null);
+    };
+
+    const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newStart = e.target.value;
+        setStartTime(newStart);
+        if (newStart) {
+            const startDate = new Date(newStart);
+            const endDate = new Date(startDate.getTime() + lessonDuration * 60000);
+            setEndTime(endDate.toISOString().slice(0, 16));
+        }
+    };
+
+    const handleDurationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newDuration = parseInt(e.target.value);
+        setLessonDuration(newDuration);
+        if (startTime) {
+            const startDate = new Date(startTime);
+            const endDate = new Date(startDate.getTime() + newDuration * 60000);
+            setEndTime(endDate.toISOString().slice(0, 16));
+        }
+    };
+
+    const openAddModal = () => {
+        setEditingEvent(null);
+        setStartTime(formatDateForInput());
+        const now = new Date();
+        now.setMinutes(0);
+        const endDate = new Date(now.getTime() + lessonDuration * 60000);
+        setEndTime(endDate.toISOString().slice(0, 16));
+        setIsAddModalOpen(true);
     };
 
     // Generate week days for weekly view
@@ -183,7 +218,7 @@ export default function ScheduleView() {
                             <CalendarDays className="w-4 h-4" />週
                         </button>
                     </div>
-                    <button onClick={() => { setEditingEvent(null); setIsAddModalOpen(true); }} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                    <button onClick={openAddModal} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
                         <Plus className="w-5 h-5" />レッスンを追加
                     </button>
                 </div>
@@ -323,14 +358,23 @@ export default function ScheduleView() {
                                     {students.map(s => <option key={s.id} value={s.name} />)}
                                 </datalist>
                             </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">レッスン時間</label>
+                                <select value={lessonDuration} onChange={handleDurationChange} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                                    <option value={30}>30分</option>
+                                    <option value={45}>45分</option>
+                                    <option value={60}>60分</option>
+                                    <option value={90}>90分</option>
+                                </select>
+                            </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-2">開始日時 <span className="text-red-400">*</span></label>
-                                    <input name="start" type="datetime-local" required defaultValue={formatDateForInput(editingEvent?.start)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                                    <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-slate-400 mb-2">終了日時 <span className="text-red-400">*</span></label>
-                                    <input name="end" type="datetime-local" required defaultValue={formatDateForInput(editingEvent?.end)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                                    <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                                 </div>
                             </div>
                             <div>

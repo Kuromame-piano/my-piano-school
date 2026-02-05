@@ -5,9 +5,10 @@ import { Copy, Check, Music, Sparkles, Plus, X, Pencil, Trash2, History, FileDow
 import { jsPDF } from "jspdf";
 import { getStudents, Student } from "../actions/studentActions";
 import { getTemplates, saveTemplate, updateTemplate, deleteTemplate, getReportHistory, saveReportHistory, ReportTemplate, ReportHistory } from "../actions/reportActions";
-import { getTuitionPayments, TuitionPayment } from "../actions/financeActions";
+import { getTuitionPayments, getAnnualSummary, TuitionPayment } from "../actions/financeActions";
+import "jspdf-autotable";
 
-type TabType = "report" | "history" | "notifications" | "invoice";
+type TabType = "report" | "history" | "notifications" | "invoice" | "annual";
 
 export default function ReportsView() {
     const [students, setStudents] = useState<Student[]>([]);
@@ -36,6 +37,15 @@ export default function ReportsView() {
     const [invoiceAmount, setInvoiceAmount] = useState("10000");
     const [invoiceMonth, setInvoiceMonth] = useState(new Date().getMonth() + 1);
 
+    // Annual Report
+    const [annualYear, setAnnualYear] = useState(new Date().getFullYear());
+    const [annualSummary, setAnnualSummary] = useState<{
+        totalIncome: number;
+        totalExpense: number;
+        expenseByCategory: { category: string; amount: number }[];
+        monthlyBreakdown: { month: string; income: number; expense: number }[];
+    } | null>(null);
+
     useEffect(() => {
         loadData();
     }, []);
@@ -53,7 +63,13 @@ export default function ReportsView() {
     useEffect(() => {
         if (activeTab === "history") loadHistory();
         if (activeTab === "notifications") loadNotifications();
-    }, [activeTab]);
+        if (activeTab === "annual") loadAnnualSummary();
+    }, [activeTab, annualYear]);
+
+    const loadAnnualSummary = async () => {
+        const summary = await getAnnualSummary(annualYear);
+        setAnnualSummary(summary);
+    };
 
     const loadHistory = async () => {
         setLoadingHistory(true);
@@ -147,48 +163,121 @@ export default function ReportsView() {
         await loadData();
     };
 
-    const generateInvoicePDF = () => {
+    const generateInvoicePDF = async () => {
         if (!invoiceStudent) return;
 
-        const doc = new jsPDF();
-        const now = new Date();
+        try {
+            const doc = new jsPDF();
 
-        // Header
-        doc.setFontSize(24);
-        doc.text("請求書", 105, 30, { align: "center" });
+            // Load Japanese font
+            const fontUrl = "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.19/files/noto-sans-jp-all-400-normal.woff";
+            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            const fontBase64 = Buffer.from(fontBytes).toString('base64');
 
-        // Date
-        doc.setFontSize(10);
-        doc.text(`発行日: ${now.toLocaleDateString("ja-JP")}`, 150, 50);
+            doc.addFileToVFS("NotoSansJP.ttf", fontBase64);
+            doc.addFont("NotoSansJP.ttf", "NotoSansJP", "normal");
+            doc.setFont("NotoSansJP");
 
-        // Student info
-        doc.setFontSize(14);
-        doc.text(`${invoiceStudent.name} 様`, 20, 70);
+            const now = new Date();
 
-        // Line
-        doc.line(20, 80, 190, 80);
+            // Header
+            doc.setFontSize(24);
+            doc.text("請求書", 105, 30, { align: "center" });
 
-        // Details
-        doc.setFontSize(12);
-        doc.text("項目", 30, 95);
-        doc.text("金額", 150, 95);
-        doc.line(20, 100, 190, 100);
+            // Date
+            doc.setFontSize(10);
+            doc.text(`発行日: ${now.toLocaleDateString("ja-JP")}`, 150, 50);
 
-        doc.text(`${invoiceMonth}月分 月謝`, 30, 115);
-        doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 115);
+            // Student info
+            doc.setFontSize(14);
+            doc.text(`${invoiceStudent.name} 様`, 20, 70);
 
-        doc.line(20, 125, 190, 125);
+            // Line
+            doc.line(20, 80, 190, 80);
 
-        // Total
-        doc.setFontSize(14);
-        doc.text("合計", 30, 145);
-        doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 145);
+            // Details
+            doc.setFontSize(12);
+            doc.text("項目", 30, 95);
+            doc.text("金額", 150, 95);
+            doc.line(20, 100, 190, 100);
 
-        // Footer
-        doc.setFontSize(10);
-        doc.text("※ 上記金額をお振込みにてお支払いください。", 20, 180);
+            doc.text(`${invoiceMonth}月分 レッスン料`, 30, 115);
+            doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 115);
 
-        doc.save(`請求書_${invoiceStudent.name}_${invoiceMonth}月.pdf`);
+            doc.line(20, 125, 190, 125);
+
+            // Total
+            doc.setFontSize(14);
+            doc.text("合計", 30, 145);
+            doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 145);
+
+            // Footer
+            doc.setFontSize(10);
+            doc.text("※ 上記金額をお振込みにてお支払いください。", 20, 180);
+
+            doc.save(`請求書_${invoiceStudent.name}_${invoiceMonth}月.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            alert("PDF生成に失敗しました。");
+        }
+    };
+
+    const generateAnnualReportPDF = async () => {
+        if (!annualSummary) return;
+
+        try {
+            const doc = new jsPDF();
+
+            // Load Japanese font
+            const fontUrl = "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.19/files/noto-sans-jp-all-400-normal.woff";
+            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            const fontBase64 = Buffer.from(fontBytes).toString('base64');
+
+            doc.addFileToVFS("NotoSansJP.ttf", fontBase64);
+            doc.addFont("NotoSansJP.ttf", "NotoSansJP", "normal");
+            doc.setFont("NotoSansJP");
+
+            doc.setFontSize(24);
+            doc.text(`${annualYear}年 年間収支レポート`, 105, 30, { align: "center" });
+
+            doc.setFontSize(14);
+            doc.text(`総収入: ¥${annualSummary.totalIncome.toLocaleString()}`, 20, 50);
+            doc.text(`総支出: ¥${annualSummary.totalExpense.toLocaleString()}`, 20, 60);
+            doc.text(`収支差額: ¥${(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}`, 20, 70);
+
+            // Monthly Breakdown Table
+            doc.text("月別推移", 20, 90);
+            (doc as any).autoTable({
+                startY: 95,
+                head: [["月", "収入", "支出", "差額"]],
+                body: annualSummary.monthlyBreakdown.map(m => [
+                    m.month,
+                    `¥${m.income.toLocaleString()}`,
+                    `¥${m.expense.toLocaleString()}`,
+                    `¥${(m.income - m.expense).toLocaleString()}`
+                ]),
+                styles: { font: "NotoSansJP" },
+            });
+
+            const finalY = (doc as any).lastAutoTable.finalY + 20;
+
+            // Expense Breakdown Table
+            doc.text("経費内訳", 20, finalY);
+            (doc as any).autoTable({
+                startY: finalY + 5,
+                head: [["カテゴリ", "金額"]],
+                body: annualSummary.expenseByCategory.map(e => [
+                    e.category,
+                    `¥${e.amount.toLocaleString()}`
+                ]),
+                styles: { font: "NotoSansJP" },
+            });
+
+            doc.save(`年間収支レポート_${annualYear}.pdf`);
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+            alert("PDF生成に失敗しました。");
+        }
     };
 
     return (
@@ -212,6 +301,9 @@ export default function ReportsView() {
                 </button>
                 <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "invoice" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}>
                     <FileDown className="w-4 h-4" />請求書
+                </button>
+                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "annual" ? "bg-purple-500/20 text-purple-300" : "text-slate-500 hover:text-slate-300"}`}>
+                    <FileDown className="w-4 h-4" />年間レポート
                 </button>
             </div>
 
@@ -397,6 +489,83 @@ export default function ReportsView() {
                         <button onClick={generateInvoicePDF} disabled={!invoiceStudent} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
                             <FileDown className="w-5 h-5" />PDFをダウンロード
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Annual Report Tab */}
+            {activeTab === "annual" && annualSummary && (
+                <div className="glass-card p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-xl font-bold">年間収支レポート（確定申告用）</h3>
+                        <div className="flex gap-4">
+                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100">
+                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}年</option>)}
+                            </select>
+                            <button onClick={generateAnnualReportPDF} className="px-4 py-2 premium-gradient rounded-lg text-white font-medium shadow-lg">
+                                PDFダウンロード
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                            <p className="text-sm text-emerald-400 mb-1">総収入</p>
+                            <p className="text-2xl font-bold">¥{annualSummary.totalIncome.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                            <p className="text-sm text-rose-400 mb-1">総支出</p>
+                            <p className="text-2xl font-bold">¥{annualSummary.totalExpense.toLocaleString()}</p>
+                        </div>
+                        <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                            <p className="text-sm text-blue-400 mb-1">収支差額</p>
+                            <p className="text-2xl font-bold">¥{(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <h4 className="font-semibold mb-4">月別推移</h4>
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-slate-400 border-b border-slate-700">
+                                    <tr>
+                                        <th className="pb-2">月</th>
+                                        <th className="pb-2">収入</th>
+                                        <th className="pb-2">支出</th>
+                                        <th className="pb-2">差額</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {annualSummary.monthlyBreakdown.map((m, i) => (
+                                        <tr key={i} className="group hover:bg-slate-800/30">
+                                            <td className="py-2">{m.month}</td>
+                                            <td className="py-2 text-emerald-400">¥{m.income.toLocaleString()}</td>
+                                            <td className="py-2 text-rose-400">¥{m.expense.toLocaleString()}</td>
+                                            <td className="py-2">¥{(m.income - m.expense).toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-4">経費内訳</h4>
+                            <table className="w-full text-sm text-left">
+                                <thead className="text-slate-400 border-b border-slate-700">
+                                    <tr>
+                                        <th className="pb-2">カテゴリ</th>
+                                        <th className="pb-2">金額</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800">
+                                    {annualSummary.expenseByCategory.map((e, i) => (
+                                        <tr key={i} className="group hover:bg-slate-800/30">
+                                            <td className="py-2">{e.category}</td>
+                                            <td className="py-2">¥{e.amount.toLocaleString()}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

@@ -23,6 +23,7 @@ import {
     TrendingUp,
     Trash2,
     ImagePlus,
+    Book,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
@@ -35,10 +36,15 @@ import {
     getStudentProgress,
     Student,
 } from "../actions/studentActions";
+import { getTextbooks, getTextbookProgress, saveTextbookProgress, Textbook, TextbookProgress } from "../actions/textbookActions";
 
-type DetailTab = "active" | "completed" | "notes" | "progress";
+type DetailTab = "active" | "completed" | "notes" | "progress" | "textbooks";
 
-export default function StudentsView() {
+interface StudentsViewProps {
+    initialStudentId?: number | null;
+}
+
+export default function StudentsView({ initialStudentId }: StudentsViewProps = {}) {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [showArchived, setShowArchived] = useState(false);
@@ -47,10 +53,28 @@ export default function StudentsView() {
         loadStudents();
     }, [showArchived]);
 
+    useEffect(() => {
+        if (initialStudentId && students.length > 0) {
+            const student = students.find(s => s.id === initialStudentId);
+            if (student) {
+                setSelectedStudent(student);
+                // Also load details implies setting active tab to info, but maybe we just want to see the modal?
+                // logic from handleStudentClick:
+                setActiveTab("active");
+                loadTextbookData(student.id);
+                // fetch notes not needed for "info" tab initially unless activeTab is notes
+            }
+        }
+    }, [initialStudentId, students]);
+
     const loadStudents = async () => {
         setLoading(true);
-        const data = await getStudents(showArchived);
-        setStudents(data);
+        const [studentData, textbookData] = await Promise.all([
+            getStudents(showArchived),
+            getTextbooks()
+        ]);
+        setStudents(studentData);
+        setTextbooks(textbookData);
         setLoading(false);
     };
 
@@ -65,8 +89,17 @@ export default function StudentsView() {
     const [loadingNotes, setLoadingNotes] = useState(false);
     const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
 
+    // Add piece modal
+    const [isAddPieceModalOpen, setIsAddPieceModalOpen] = useState(false);
+    const [addingPieceForStudentId, setAddingPieceForStudentId] = useState<number | null>(null);
+
     // Progress chart
     const [progressData, setProgressData] = useState<{ month: string; completedCount: number }[]>([]);
+
+    // Textbooks
+    const [textbooks, setTextbooks] = useState<Textbook[]>([]);
+    const [textbookProgress, setTextbookProgress] = useState<(TextbookProgress & { textbookTitle: string; totalPages: number })[]>([]);
+    const [isAddTextbookModalOpen, setIsAddTextbookModalOpen] = useState(false);
 
     const filteredStudents = students.filter((s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -77,6 +110,8 @@ export default function StudentsView() {
             loadLessonNotes(selectedStudent.id);
         } else if (selectedStudent && activeTab === "progress") {
             loadProgressData(selectedStudent.id);
+        } else if (selectedStudent && activeTab === "textbooks") {
+            loadTextbookData(selectedStudent.id);
         }
     }, [selectedStudent, activeTab]);
 
@@ -90,6 +125,33 @@ export default function StudentsView() {
     const loadProgressData = async (studentId: number) => {
         const data = await getStudentProgress(studentId);
         setProgressData(data);
+    };
+
+    const loadTextbookData = async (studentId: number) => {
+        const progress = await getTextbookProgress(studentId);
+        setTextbookProgress(progress);
+    };
+
+    const handleSaveTextbookProgress = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!selectedStudent) return;
+        const form = e.target as HTMLFormElement;
+        const formData = new FormData(form);
+
+        const textbookId = Number(formData.get("textbookId"));
+        const currentPage = Number(formData.get("currentPage"));
+
+        await saveTextbookProgress({
+            studentId: selectedStudent.id,
+            textbookId,
+            status: "in_progress",
+            currentPage,
+            startDate: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+        });
+
+        await loadTextbookData(selectedStudent.id);
+        setIsAddTextbookModalOpen(false);
     };
 
     const handleUpdateProgress = async (studentId: number, pieceId: number, progress: number) => {
@@ -136,16 +198,33 @@ export default function StudentsView() {
         if (updatedStudent) await saveStudent(updatedStudent);
     };
 
-    const handleAddPiece = async (studentId: number) => {
-        const title = prompt("新しい曲名を入力してください");
-        if (!title) return;
+    const openAddPieceModal = (studentId: number) => {
+        setAddingPieceForStudentId(studentId);
+        setIsAddPieceModalOpen(true);
+    };
 
-        const newPiece = { id: Date.now(), title, progress: 0, status: "active" as const, startedAt: new Date().toLocaleDateString("ja-JP") };
+    const handleAddPieceSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (!addingPieceForStudentId) return;
+
+        const form = e.target as HTMLFormElement;
+        const formData = new FormData(form);
+        const title = formData.get("title") as string;
+        const coverImage = formData.get("coverImage") as string;
+
+        const newPiece = {
+            id: Date.now(),
+            title,
+            progress: 0,
+            status: "active" as const,
+            startedAt: new Date().toLocaleDateString("ja-JP"),
+            coverImage: coverImage || undefined,
+        };
         let updatedStudent: Student | undefined;
 
         setStudents((prev) =>
             prev.map((s) => {
-                if (s.id === studentId) {
+                if (s.id === addingPieceForStudentId) {
                     updatedStudent = { ...s, pieces: [newPiece, ...s.pieces] };
                     return updatedStudent;
                 }
@@ -153,11 +232,13 @@ export default function StudentsView() {
             })
         );
 
-        if (selectedStudent?.id === studentId) {
+        if (selectedStudent?.id === addingPieceForStudentId) {
             setSelectedStudent((prev) => (prev ? { ...prev, pieces: [newPiece, ...prev.pieces] } : null));
         }
 
         if (updatedStudent) await saveStudent(updatedStudent);
+        setIsAddPieceModalOpen(false);
+        setAddingPieceForStudentId(null);
     };
 
     const handleArchiveStudent = async (studentId: number, archive: boolean) => {
@@ -308,13 +389,14 @@ export default function StudentsView() {
                             <button onClick={() => setActiveTab("completed")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "completed" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}><History className="w-4 h-4" />合格履歴 ({selectedStudent.pieces.filter((p) => p.status === "completed").length})</button>
                             <button onClick={() => setActiveTab("notes")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "notes" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}><StickyNote className="w-4 h-4" />ノート</button>
                             <button onClick={() => setActiveTab("progress")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "progress" ? "bg-pink-500/20 text-pink-300" : "text-slate-500 hover:text-slate-300"}`}><TrendingUp className="w-4 h-4" />上達グラフ</button>
+                            <button onClick={() => setActiveTab("textbooks")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "textbooks" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}><Book className="w-4 h-4" />教本管理</button>
                         </div>
 
                         {/* Tab Content */}
                         <div className="space-y-4">
                             {activeTab === "active" && (
                                 <>
-                                    <button onClick={() => handleAddPiece(selectedStudent.id)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-violet-500/50 rounded-xl text-slate-500 hover:text-violet-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />新しい曲を追加</button>
+                                    <button onClick={() => openAddPieceModal(selectedStudent.id)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-violet-500/50 rounded-xl text-slate-500 hover:text-violet-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />新しい曲を追加</button>
                                     {selectedStudent.pieces.filter((p) => p.status === "active").map((piece) => (
                                         <div key={piece.id} className="glass-card p-5 space-y-4">
                                             <div className="flex items-start justify-between">
@@ -400,6 +482,43 @@ export default function StudentsView() {
                                     )}
                                 </div>
                             )}
+
+                            {activeTab === "textbooks" && (
+                                <>
+                                    <button onClick={() => setIsAddTextbookModalOpen(true)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-amber-500/50 rounded-xl text-slate-500 hover:text-amber-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />教本を追加</button>
+                                    {textbookProgress.length === 0 ? (
+                                        <p className="text-center py-8 text-slate-600">教本はまだ登録されていません</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {textbookProgress.map((prog) => (
+                                                <div key={prog.textbookId} className="glass-card p-5">
+                                                    <div className="flex justify-between items-start mb-4">
+                                                        <div>
+                                                            <h4 className="font-semibold text-lg flex items-center gap-2">
+                                                                <Book className="w-5 h-5 text-amber-400" />
+                                                                {prog.textbookTitle}
+                                                            </h4>
+                                                            <p className="text-sm text-slate-500">開始: {prog.startDate ? new Date(prog.startDate).toLocaleDateString("ja-JP") : "-"}</p>
+                                                        </div>
+                                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${prog.status === "completed" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"}`}>
+                                                            {prog.status === "completed" ? "修了" : "進行中"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-slate-400">進捗状況</span>
+                                                            <span className="text-slate-200">{prog.currentPage} / {prog.totalPages} ページ</span>
+                                                        </div>
+                                                        <div className="w-full bg-slate-800 rounded-full h-2">
+                                                            <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${(prog.currentPage / prog.totalPages) * 100}%` }} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -483,6 +602,53 @@ export default function StudentsView() {
                                 <textarea name="content" rows={5} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="今日のレッスン内容、注意点、次回への課題など..." />
                             </div>
                             <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">保存する</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Piece Modal */}
+            {isAddPieceModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); }} />
+                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
+                        <button onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); }} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                        <h3 className="text-2xl font-bold text-gradient mb-6">新しい曲を追加</h3>
+                        <form onSubmit={handleAddPieceSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">曲名 <span className="text-red-400">*</span></label>
+                                <input name="title" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">カバー画像URL（任意）</label>
+                                <input name="coverImage" type="url" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="https://..." />
+                            </div>
+                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">追加する</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Textbook Modal */}
+            {isAddTextbookModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddTextbookModalOpen(false)} />
+                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
+                        <button onClick={() => setIsAddTextbookModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                        <h3 className="text-2xl font-bold text-gradient mb-6">教本を追加</h3>
+                        <form onSubmit={handleSaveTextbookProgress} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">教本を選択</label>
+                                <select name="textbookId" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                                    <option value="">選択してください</option>
+                                    {textbooks.map((t) => <option key={t.id} value={t.id}>{t.title} ({t.level})</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">現在のページ</label>
+                                <input name="currentPage" type="number" min="0" defaultValue="0" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                            </div>
+                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg">追加する</button>
                         </form>
                     </div>
                 </div>

@@ -10,14 +10,15 @@ import {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-    getTuitionPayments,
-    saveTuitionPayment,
+    getLessonPayments,
+    saveLessonPayment,
     Transaction,
-    TuitionPayment,
+    LessonPayment,
 } from "../actions/financeActions";
 import { getStudents, Student } from "../actions/studentActions";
+import { getLessons, CalendarEvent } from "../actions/calendarActions";
 
-type TabType = "transactions" | "tuition" | "chart";
+type TabType = "transactions" | "lessons" | "chart";
 
 export default function FinanceView() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -36,9 +37,10 @@ export default function FinanceView() {
     const [addType, setAddType] = useState<"income" | "expense">("expense");
     const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
 
-    // Tuition payments
-    const [tuitionPayments, setTuitionPayments] = useState<TuitionPayment[]>([]);
-    const [loadingTuition, setLoadingTuition] = useState(false);
+    // Lesson payments (都度払い)
+    const [lessonPayments, setLessonPayments] = useState<LessonPayment[]>([]);
+    const [monthLessons, setMonthLessons] = useState<CalendarEvent[]>([]);
+    const [loadingLessons, setLoadingLessons] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -55,29 +57,38 @@ export default function FinanceView() {
     }, [selectedYear, selectedMonth]);
 
     useEffect(() => {
-        if (activeTab === "tuition") {
-            loadTuitionPayments();
+        if (activeTab === "lessons") {
+            loadLessonPayments();
         }
     }, [activeTab, selectedYear, selectedMonth]);
 
-    const loadTuitionPayments = async () => {
-        setLoadingTuition(true);
-        const payments = await getTuitionPayments(selectedYear, selectedMonth + 1);
+    const loadLessonPayments = async () => {
+        setLoadingLessons(true);
 
-        // Merge with students list
-        const merged = students.map((s) => {
-            const existing = payments.find((p) => p.studentId === s.id);
+        // Get lessons for the month
+        const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+        const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0);
+        const lessons = await getLessons(startOfMonth.toISOString(), endOfMonth.toISOString());
+        setMonthLessons(lessons);
+
+        // Get existing payments
+        const payments = await getLessonPayments(selectedYear, selectedMonth + 1);
+
+        // Create payment records for each lesson
+        const merged: LessonPayment[] = lessons.map((lesson) => {
+            const student = students.find((s) => s.name === lesson.title);
+            const existing = payments.find((p) => p.lessonDate === lesson.start.split("T")[0] && p.studentId === student?.id);
             return existing || {
-                studentId: s.id,
-                studentName: s.name,
-                year: selectedYear,
-                month: selectedMonth + 1,
-                paid: false,
+                id: Date.now() + Math.random(),
+                studentId: student?.id || 0,
+                studentName: lesson.title,
+                lessonDate: lesson.start.split("T")[0],
                 amount: 0,
+                paid: false,
             };
         });
-        setTuitionPayments(merged);
-        setLoadingTuition(false);
+        setLessonPayments(merged);
+        setLoadingLessons(false);
     };
 
     const handlePrevMonth = () => {
@@ -151,21 +162,21 @@ export default function FinanceView() {
         setIsAddModalOpen(true);
     };
 
-    const handleToggleTuitionPayment = async (payment: TuitionPayment) => {
+    const handleToggleLessonPayment = async (payment: LessonPayment) => {
         const updated = {
             ...payment,
             paid: !payment.paid,
             paidDate: !payment.paid ? new Date().toLocaleDateString("ja-JP") : undefined,
         };
-        await saveTuitionPayment(updated);
-        await loadTuitionPayments();
+        await saveLessonPayment(updated);
+        await loadLessonPayments();
     };
 
     return (
         <div className="space-y-6">
             <header className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-gradient mb-2">月謝・経費管理</h2>
+                    <h2 className="text-3xl font-bold text-gradient mb-2">レッスン料・経費管理</h2>
                     <p className="text-slate-400">収入と支出を記録・管理</p>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
@@ -193,8 +204,8 @@ export default function FinanceView() {
                 <button onClick={() => setActiveTab("transactions")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "transactions" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
                     <Wallet className="w-4 h-4" />取引一覧
                 </button>
-                <button onClick={() => setActiveTab("tuition")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "tuition" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}>
-                    <Receipt className="w-4 h-4" />月謝管理
+                <button onClick={() => setActiveTab("lessons")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "lessons" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}>
+                    <Receipt className="w-4 h-4" />レッスン料管理
                 </button>
                 <button onClick={() => setActiveTab("chart")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "chart" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
                     <BarChart3 className="w-4 h-4" />グラフ
@@ -256,34 +267,43 @@ export default function FinanceView() {
                 </>
             )}
 
-            {activeTab === "tuition" && (
+            {activeTab === "lessons" && (
                 <div className="glass-card">
                     <div className="p-5 border-b border-slate-800">
-                        <h3 className="font-semibold text-lg">{formatMonthYear(selectedDate)}の月謝支払い状況</h3>
+                        <h3 className="font-semibold text-lg">{formatMonthYear(selectedDate)}のレッスン料支払い状況</h3>
                         <p className="text-sm text-slate-500 mt-1">
-                            支払い済み: {tuitionPayments.filter((p) => p.paid).length} / {tuitionPayments.length}人
+                            支払い済み: {lessonPayments.filter((p) => p.paid).length} / {lessonPayments.length}件
                         </p>
                     </div>
-                    {loadingTuition ? (
+                    {loadingLessons ? (
                         <div className="p-8 text-center text-slate-500">読み込み中...</div>
-                    ) : tuitionPayments.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500">生徒が登録されていません</div>
+                    ) : lessonPayments.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500">この月のレッスンはありません</div>
                     ) : (
                         <div className="divide-y divide-slate-800">
-                            {tuitionPayments.map((payment) => (
-                                <div key={payment.studentId} className="p-4 flex items-center gap-4 hover:bg-slate-800/30">
+                            {lessonPayments.sort((a, b) => new Date(a.lessonDate).getTime() - new Date(b.lessonDate).getTime()).map((payment, idx) => (
+                                <div key={`${payment.studentId}-${payment.lessonDate}-${idx}`} className="p-4 flex items-center gap-4 hover:bg-slate-800/30">
                                     <button
-                                        onClick={() => handleToggleTuitionPayment(payment)}
+                                        onClick={() => handleToggleLessonPayment(payment)}
                                         className={`p-2 rounded-lg transition-colors ${payment.paid ? "bg-emerald-500/20" : "bg-slate-800"}`}
                                     >
                                         {payment.paid ? <CheckCircle className="w-5 h-5 text-emerald-400" /> : <AlertCircle className="w-5 h-5 text-slate-500" />}
                                     </button>
                                     <div className="flex-1">
                                         <p className={`font-medium ${payment.paid ? "text-slate-300" : "text-white"}`}>{payment.studentName}</p>
-                                        {payment.paid && payment.paidDate && (
-                                            <p className="text-xs text-emerald-500">支払い日: {payment.paidDate}</p>
-                                        )}
+                                        <p className="text-sm text-slate-500">{new Date(payment.lessonDate).toLocaleDateString("ja-JP", { month: "short", day: "numeric", weekday: "short" })}</p>
                                     </div>
+                                    <input
+                                        type="number"
+                                        value={payment.amount}
+                                        onChange={async (e) => {
+                                            const newAmount = Number(e.target.value);
+                                            await saveLessonPayment({ ...payment, amount: newAmount });
+                                            await loadLessonPayments();
+                                        }}
+                                        className="w-24 px-3 py-1.5 bg-slate-800/50 border border-slate-700 rounded-lg text-right text-sm"
+                                        placeholder="金額"
+                                    />
                                     <span className={`text-sm font-medium px-3 py-1 rounded-full ${payment.paid ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
                                         {payment.paid ? "支払い済み" : "未払い"}
                                     </span>
