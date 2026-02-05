@@ -13,27 +13,32 @@ import {
     X,
     Check,
     History,
+    Pencil,
+    Mail,
+    User,
+    FileText,
+    Cake
 } from "lucide-react";
 
-import { getStudents, saveStudent, Student } from "../actions/studentActions"; // Import from actions
-
-
-// Local interfaces removed in favor of imported ones
-// INITIAL_STUDENTS removed
-
+import { getStudents, saveStudent, Student } from "../actions/studentActions";
 
 export default function StudentsView() {
     const [students, setStudents] = useState<Student[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // Fetch students on mount
     useEffect(() => {
-        getStudents().then(setStudents);
+        getStudents().then((data) => {
+            setStudents(data);
+            setLoading(false);
+        });
     }, []);
 
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null); // For edit mode
     const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
 
     const filteredStudents = students.filter((s) =>
@@ -91,9 +96,7 @@ export default function StudentsView() {
     const handleAddPiece = async (studentId: number) => {
         const title = prompt("新しい曲名を入力してください");
         if (!title) return;
-        // Need to import Piece interface? Or just match structure.
-        // Piece is exported from studentActions? No, it's not exported. 
-        // Let's rely on standard object literal matching Student.pieces type.
+
         const newPiece = { id: Date.now(), title, progress: 0, status: "active" as const, startedAt: new Date().toLocaleDateString("ja-JP") };
 
         let updatedStudent: Student | undefined;
@@ -115,6 +118,11 @@ export default function StudentsView() {
         }
     };
 
+    const openEditModal = (student: Student) => {
+        setEditingStudent(student);
+        setIsAddModalOpen(true);
+    };
+
     return (
         <div className="space-y-6">
             <header className="flex items-center justify-between">
@@ -122,7 +130,7 @@ export default function StudentsView() {
                     <h2 className="text-3xl font-bold text-gradient mb-2">生徒管理</h2>
                     <p className="text-slate-400">生徒情報と練習中の曲を管理</p>
                 </div>
-                <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
+                <button onClick={() => { setEditingStudent(null); setIsAddModalOpen(true); }} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
                     <Plus className="w-5 h-5" />
                     生徒を追加
                 </button>
@@ -133,43 +141,73 @@ export default function StudentsView() {
                 <input type="text" placeholder="生徒名で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-slate-900/50 border border-slate-800 rounded-xl text-slate-100 placeholder:text-slate-500 focus:border-violet-500/50" />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredStudents.map((student) => (
-                    <button key={student.id} onClick={() => setSelectedStudent(student)} className="glass-card p-5 text-left hover:bg-slate-800/50 transition-all group">
-                        <div className="flex items-start gap-4">
-                            <div className={`w-14 h-14 rounded-xl ${student.color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>{student.name[0]}</div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-lg truncate">{student.name}</p>
-                                <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1"><Calendar className="w-3.5 h-3.5" />{student.lessonDay}</p>
-                                <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5" />{student.address}</p>
+            {loading ? (
+                <div className="text-center py-12 text-slate-500">読み込み中...</div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredStudents.map((student) => (
+                        <button key={student.id} onClick={() => setSelectedStudent(student)} className="glass-card p-5 text-left hover:bg-slate-800/50 transition-all group">
+                            <div className="flex items-start gap-4">
+                                <div className={`w-14 h-14 rounded-xl ${student.color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>{student.name[0]}</div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-lg truncate">{student.name}</p>
+                                    <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1"><Calendar className="w-3.5 h-3.5" />{student.lessonDay}</p>
+                                    <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5" />{student.address}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-violet-400" />
                             </div>
-                            <ChevronRight className="w-5 h-5 text-slate-600 group-hover:text-violet-400" />
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-slate-800">
-                            <p className="text-xs text-slate-500 mb-2">練習中: {student.pieces.filter((p) => p.status === "active").length}曲</p>
-                            <div className="flex gap-2 flex-wrap">
-                                {student.pieces.filter((p) => p.status === "active").slice(0, 2).map((piece) => (
-                                    <span key={piece.id} className="text-xs px-2.5 py-1 bg-violet-500/10 text-violet-300 rounded-full">{piece.title.length > 12 ? piece.title.slice(0, 12) + "..." : piece.title}</span>
-                                ))}
+                            <div className="mt-4 pt-4 border-t border-slate-800">
+                                <p className="text-xs text-slate-500 mb-2">練習中: {student.pieces.filter((p) => p.status === "active").length}曲</p>
+                                <div className="flex gap-2 flex-wrap">
+                                    {student.pieces.filter((p) => p.status === "active").slice(0, 2).map((piece) => (
+                                        <span key={piece.id} className="text-xs px-2.5 py-1 bg-violet-500/10 text-violet-300 rounded-full">{piece.title.length > 12 ? piece.title.slice(0, 12) + "..." : piece.title}</span>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    </button>
-                ))}
-            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {selectedStudent && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
                     <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-8 max-h-[90vh] overflow-y-auto">
                         <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
-                        <div className="flex items-center gap-5 mb-8">
-                            <div className={`w-20 h-20 rounded-2xl ${selectedStudent.color} flex items-center justify-center text-white font-bold text-3xl shadow-xl`}>{selectedStudent.name[0]}</div>
-                            <div>
-                                <h3 className="text-2xl font-bold">{selectedStudent.name}</h3>
-                                <p className="text-slate-400 flex items-center gap-2 mt-1"><Phone className="w-4 h-4" />{selectedStudent.phone}</p>
-                                <p className="text-slate-500 flex items-center gap-2"><MapPin className="w-4 h-4" />{selectedStudent.address}</p>
+
+                        <div className="flex items-start justify-between mb-8">
+                            <div className="flex items-center gap-5">
+                                <div className={`w-20 h-20 rounded-2xl ${selectedStudent.color} flex items-center justify-center text-white font-bold text-3xl shadow-xl`}>{selectedStudent.name[0]}</div>
+                                <div>
+                                    <h3 className="text-2xl font-bold">{selectedStudent.name}</h3>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
+                                        <p className="text-slate-400 flex items-center gap-2"><Phone className="w-4 h-4" />{selectedStudent.phone}</p>
+                                        <p className="text-slate-500 flex items-center gap-2"><MapPin className="w-4 h-4" />{selectedStudent.address}</p>
+                                        {selectedStudent.email && <p className="text-slate-500 flex items-center gap-2"><Mail className="w-4 h-4" />{selectedStudent.email}</p>}
+                                        {selectedStudent.birthDate && <p className="text-slate-500 flex items-center gap-2"><Cake className="w-4 h-4" />{selectedStudent.birthDate}</p>}
+                                    </div>
+                                    {(selectedStudent.parentName || selectedStudent.parentPhone) && (
+                                        <div className="mt-2 text-sm text-slate-500 flex items-center gap-2 border-t border-slate-800 pt-2">
+                                            <User className="w-4 h-4" />
+                                            <span>保護者: {selectedStudent.parentName} {selectedStudent.parentPhone && `(${selectedStudent.parentPhone})`}</span>
+                                        </div>
+                                    )}
+                                    {selectedStudent.memo && (
+                                        <div className="mt-2 text-sm text-slate-400 italic bg-slate-800/30 p-2 rounded-lg">
+                                            <FileText className="w-3 h-3 inline mr-1" />
+                                            {selectedStudent.memo}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            <button
+                                onClick={() => openEditModal(selectedStudent)}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-colors"
+                            >
+                                <Pencil className="w-4 h-4" /> 編集
+                            </button>
                         </div>
+
                         <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit mb-6">
                             <button onClick={() => setActiveTab("active")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "active" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}><Music className="w-4 h-4" />練習中 ({selectedStudent.pieces.filter((p) => p.status === "active").length})</button>
                             <button onClick={() => setActiveTab("completed")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "completed" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}><History className="w-4 h-4" />合格履歴 ({selectedStudent.pieces.filter((p) => p.status === "completed").length})</button>
@@ -212,32 +250,63 @@ export default function StudentsView() {
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
+                    <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-8 max-h-[90vh] overflow-y-auto">
                         <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
-                        <h3 className="text-2xl font-bold text-gradient mb-6">新規生徒の登録</h3>
+                        <h3 className="text-2xl font-bold text-gradient mb-6">{editingStudent ? "生徒情報を編集" : "新規生徒の登録"}</h3>
                         <form onSubmit={async (e) => {
                             e.preventDefault();
                             const form = e.target as HTMLFormElement;
                             const formData = new FormData(form);
                             const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
-                            const newStudent: Student = {
-                                id: Date.now(),
+
+                            const newStudentData: Student = {
+                                id: editingStudent ? editingStudent.id : Date.now(),
                                 name: formData.get("name") as string,
                                 phone: formData.get("phone") as string,
+                                email: formData.get("email") as string,
                                 address: formData.get("address") as string,
                                 lessonDay: formData.get("lessonDay") as string,
-                                color: colors[Math.floor(Math.random() * colors.length)],
-                                pieces: []
+                                birthDate: formData.get("birthDate") as string,
+                                parentName: formData.get("parentName") as string,
+                                parentPhone: formData.get("parentPhone") as string,
+                                memo: formData.get("memo") as string,
+                                color: editingStudent ? editingStudent.color : colors[Math.floor(Math.random() * colors.length)],
+                                pieces: editingStudent ? editingStudent.pieces : []
                             };
-                            setStudents([newStudent, ...students]);
+
+                            if (editingStudent) {
+                                setStudents(students.map(s => s.id === editingStudent.id ? newStudentData : s));
+                                if (selectedStudent?.id === editingStudent.id) setSelectedStudent(newStudentData);
+                            } else {
+                                setStudents([newStudentData, ...students]);
+                            }
+
                             setIsAddModalOpen(false);
-                            await saveStudent(newStudent);
-                        }} className="space-y-5">
-                            <div><label className="block text-sm font-medium text-slate-400 mb-2">お名前</label><input name="name" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 花子" /></div>
-                            <div><label className="block text-sm font-medium text-slate-400 mb-2">電話番号</label><input name="phone" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-1234-5678" /></div>
-                            <div><label className="block text-sm font-medium text-slate-400 mb-2">住所（出張先）</label><input name="address" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 江東区清澄白河" /></div>
-                            <div><label className="block text-sm font-medium text-slate-400 mb-2">レッスン日時</label><input name="lessonDay" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 毎週火曜 14:00" /></div>
-                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg hover:shadow-xl">登録する</button>
+                            setEditingStudent(null);
+                            await saveStudent(newStudentData);
+                        }} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="space-y-4">
+                                    <h4 className="font-semibold text-slate-300 border-b border-slate-700 pb-2 mb-4">基本情報</h4>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">お名前 <span className="text-red-400">*</span></label><input name="name" defaultValue={editingStudent?.name} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 花子" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">電話番号</label><input name="phone" defaultValue={editingStudent?.phone} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-1234-5678" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">メールアドレス</label><input name="email" type="email" defaultValue={editingStudent?.email} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: example@email.com" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">住所</label><input name="address" defaultValue={editingStudent?.address} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 江東区清澄白河..." /></div>
+                                </div>
+                                <div className="space-y-4">
+                                    <h4 className="font-semibold text-slate-300 border-b border-slate-700 pb-2 mb-4">詳細情報</h4>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">レッスン日時</label><input name="lessonDay" defaultValue={editingStudent?.lessonDay} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 毎週火曜 14:00" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">生年月日</label><input name="birthDate" type="date" defaultValue={editingStudent?.birthDate} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者氏名</label><input name="parentName" defaultValue={editingStudent?.parentName} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 太郎" /></div>
+                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者電話番号</label><input name="parentPhone" defaultValue={editingStudent?.parentPhone} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-0000-0000" /></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">メモ (特記事項など)</label>
+                                <textarea name="memo" defaultValue={editingStudent?.memo} rows={3} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 発表会への参加希望、苦手な音階など" />
+                            </div>
+
+                            <button type="submit" className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg hover:shadow-xl mt-6">{editingStudent ? "更新する" : "登録する"}</button>
                         </form>
                     </div>
                 </div>

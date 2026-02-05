@@ -4,11 +4,15 @@ import { Users, Wallet, Calendar, TrendingUp } from "lucide-react";
 
 import { getStudents } from "../actions/studentActions";
 import { getTransactions } from "../actions/financeActions";
-import { getUpcomingLessons } from "../actions/calendarActions";
+import { getLessons } from "../actions/calendarActions";
 import { useEffect, useState } from "react";
 
 
-export default function DashboardView() {
+interface DashboardViewProps {
+    onViewChange: (view: "dashboard" | "students" | "finance" | "reports" | "schedule") => void;
+}
+
+export default function DashboardView({ onViewChange }: DashboardViewProps) {
     const [stats, setStats] = useState({
         studentCount: 0,
         monthlyIncome: 0,
@@ -21,7 +25,7 @@ export default function DashboardView() {
             const [students, transactions, events] = await Promise.all([
                 getStudents(),
                 getTransactions(),
-                getUpcomingLessons()
+                getLessons()
             ]);
 
             // Calculate Student Count
@@ -124,15 +128,16 @@ export default function DashboardView() {
                 <h3 className="text-xl font-semibold mb-4">クイックアクション</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                        { label: "生徒を追加", icon: Users },
-                        { label: "収支を記録", icon: Wallet },
-                        { label: "予定を確認", icon: Calendar },
-                        { label: "報告を作成", icon: TrendingUp },
+                        { label: "生徒を追加", icon: Users, view: "students" },
+                        { label: "収支を記録", icon: Wallet, view: "finance" },
+                        { label: "予定を確認", icon: Calendar, view: "schedule" },
+                        { label: "報告を作成", icon: TrendingUp, view: "reports" },
                     ].map((action) => {
                         const Icon = action.icon;
                         return (
                             <button
                                 key={action.label}
+                                onClick={() => onViewChange(action.view as "students" | "finance" | "schedule" | "reports")}
                                 className="glass-card p-4 flex flex-col items-center gap-2 hover:bg-slate-800/50 transition-colors"
                             >
                                 <Icon className="w-6 h-6 text-slate-400" />

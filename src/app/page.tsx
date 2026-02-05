@@ -16,7 +16,7 @@ export default function Home() {
     const renderView = () => {
         switch (activeView) {
             case "dashboard":
-                return <DashboardView />;
+                return <DashboardView onViewChange={setActiveView} />;
             case "students":
                 return <StudentsView />;
             case "finance":
@@ -26,7 +26,7 @@ export default function Home() {
             case "schedule":
                 return <ScheduleView />;
             default:
-                return <DashboardView />;
+                return <DashboardView onViewChange={setActiveView} />;
         }
     };
 

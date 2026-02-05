@@ -19,6 +19,11 @@ export interface Student {
     lessonDay: string;
     pieces: Piece[];
     color: string;
+    email?: string;
+    parentName?: string;
+    parentPhone?: string;
+    birthDate?: string;
+    memo?: string;
 }
 
 const SHEET_NAME = "Students";
@@ -28,7 +33,7 @@ export async function getStudents(): Promise<Student[]> {
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A2:G`, // Assuming header row
+            range: `${SHEET_NAME}!A2:L`, // Expanded range for new columns
         });
 
         const rows = response.data.values;
@@ -42,6 +47,11 @@ export async function getStudents(): Promise<Student[]> {
             lessonDay: row[4] || "",
             color: row[5] || "bg-gray-500",
             pieces: row[6] ? JSON.parse(row[6]) : [],
+            email: row[7] || "",
+            parentName: row[8] || "",
+            parentPhone: row[9] || "",
+            birthDate: row[10] || "",
+            memo: row[11] || "",
         }));
     } catch (error) {
         console.error("Error fetching students:", error);
@@ -51,14 +61,6 @@ export async function getStudents(): Promise<Student[]> {
 
 export async function saveStudent(student: Student) {
     try {
-        // In a real app with concurrent users, this simple "read all, find index, update" is risky for race conditions.
-        // But for a single-user app or low volume, it's acceptable for now.
-        // Better approach: Use row lookup or a dedicated ID column search.
-
-        // For simplicity, we will just Append if ID doesn't exist, or Update if it does.
-        // However, finding the ROW number is tricky without reading everything.
-        // Le'ts read everything to find the row index.
-
         const students = await getStudents();
         const existingIndex = students.findIndex(s => s.id === student.id);
 
@@ -71,12 +73,16 @@ export async function saveStudent(student: Student) {
             student.address,
             student.lessonDay,
             student.color,
-            JSON.stringify(student.pieces)
+            JSON.stringify(student.pieces),
+            student.email || "",
+            student.parentName || "",
+            student.parentPhone || "",
+            student.birthDate || "",
+            student.memo || ""
         ];
 
         if (existingIndex !== -1) {
             // Update
-            // precise range: A(2 + index)
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
