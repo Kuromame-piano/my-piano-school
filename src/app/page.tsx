@@ -7,8 +7,9 @@ import StudentsView from "@/components/StudentsView";
 import FinanceView from "@/components/FinanceView";
 import ReportsView from "@/components/ReportsView";
 import ScheduleView from "@/components/ScheduleView";
+import RecitalView from "@/components/RecitalView";
 
-type View = "dashboard" | "students" | "finance" | "reports" | "schedule";
+type View = "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital";
 
 export default function Home() {
     const [activeView, setActiveView] = useState<View>("dashboard");
@@ -25,6 +26,8 @@ export default function Home() {
                 return <ReportsView />;
             case "schedule":
                 return <ScheduleView />;
+            case "recital":
+                return <RecitalView />;
             default:
                 return <DashboardView onViewChange={setActiveView} />;
         }

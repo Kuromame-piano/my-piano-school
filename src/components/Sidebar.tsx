@@ -7,9 +7,10 @@ import {
     FileText,
     Calendar,
     Music,
+    Mic2,
 } from "lucide-react";
 
-type View = "dashboard" | "students" | "finance" | "reports" | "schedule";
+type View = "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital";
 
 interface SidebarProps {
     activeView: View;
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
     { id: "finance" as View, label: "月謝・経費", icon: Wallet },
     { id: "reports" as View, label: "レッスン報告", icon: FileText },
     { id: "schedule" as View, label: "スケジュール", icon: Calendar },
+    { id: "recital" as View, label: "発表会", icon: Mic2 },
 ];
 
 export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
@@ -48,8 +50,8 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
                             key={item.id}
                             onClick={() => onViewChange(item.id)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${isActive
-                                    ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
-                                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                                ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                                 }`}
                         >
                             <Icon className="w-5 h-5" />
