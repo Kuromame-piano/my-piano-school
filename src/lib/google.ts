@@ -29,16 +29,23 @@ const getAuthOptions = () => {
     };
 };
 
-const auth = new google.auth.GoogleAuth(getAuthOptions());
+// Lazy initialization to avoid build failures
+let auth: any = null;
+const getAuth = () => {
+    if (!auth) {
+        auth = new google.auth.GoogleAuth(getAuthOptions());
+    }
+    return auth;
+};
 
 export const getSheetsClient = async () => {
-    const client = await auth.getClient();
-    return google.sheets({ version: 'v4', auth: client as any });
+    const client = await getAuth().getClient();
+    return google.sheets({ version: 'v4', auth: client });
 };
 
 export const getCalendarClient = async () => {
-    const client = await auth.getClient();
-    return google.calendar({ version: 'v3', auth: client as any });
+    const client = await getAuth().getClient();
+    return google.calendar({ version: 'v3', auth: client });
 };
 
 export const SPREADSHEET_ID = process.env.SPREADSHEET_ID || "";
