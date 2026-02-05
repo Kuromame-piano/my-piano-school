@@ -13,4 +13,14 @@ const nextConfig: NextConfig = {
     turbopack: {},
 };
 
-export default withPWA(nextConfig);
+const finalConfig = withPWA(nextConfig);
+
+// Ensure turbopack config is preserved/added to silence the error about missing turbopack config
+// when webpack config is present (injected by next-pwa).
+// @ts-ignore
+if (!finalConfig.turbopack) {
+    // @ts-ignore
+    finalConfig.turbopack = {};
+}
+
+export default finalConfig;
