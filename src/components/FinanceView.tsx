@@ -41,6 +41,7 @@ export default function FinanceView() {
     const [lessonPayments, setLessonPayments] = useState<LessonPayment[]>([]);
     const [monthLessons, setMonthLessons] = useState<CalendarEvent[]>([]);
     const [loadingLessons, setLoadingLessons] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -123,30 +124,37 @@ export default function FinanceView() {
 
     const handleAddOrUpdateTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+        if (isSaving) return; // 二重クリック防止
+        setIsSaving(true);
 
-        const tx: Transaction = {
-            id: editingTransaction ? editingTransaction.id : Date.now(),
-            type: addType,
-            category: formData.get("category") as string,
-            description: formData.get("description") as string,
-            amount: parseInt(formData.get("amount") as string) || 0,
-            date: formData.get("date") as string || new Date().toLocaleDateString("ja-JP"),
-            studentName: addType === "income" ? (formData.get("studentName") as string) : undefined,
-        };
+        try {
+            const form = e.target as HTMLFormElement;
+            const formData = new FormData(form);
 
-        if (editingTransaction) {
-            await updateTransaction(tx);
-        } else {
-            await addTransaction(tx);
+            const tx: Transaction = {
+                id: editingTransaction ? editingTransaction.id : Date.now(),
+                type: addType,
+                category: formData.get("category") as string,
+                description: formData.get("description") as string,
+                amount: parseInt(formData.get("amount") as string) || 0,
+                date: formData.get("date") as string || new Date().toLocaleDateString("ja-JP"),
+                studentName: addType === "income" ? (formData.get("studentName") as string) : undefined,
+            };
+
+            if (editingTransaction) {
+                await updateTransaction(tx);
+            } else {
+                await addTransaction(tx);
+            }
+
+            // Refresh data
+            const updatedTx = await getTransactionsByMonth(selectedYear, selectedMonth);
+            setTransactions(updatedTx);
+            setIsAddModalOpen(false);
+            setEditingTransaction(null);
+        } finally {
+            setIsSaving(false);
         }
-
-        // Refresh data
-        const updatedTx = await getTransactionsByMonth(selectedYear, selectedMonth);
-        setTransactions(updatedTx);
-        setIsAddModalOpen(false);
-        setEditingTransaction(null);
     };
 
     const handleDeleteTransaction = async (id: number) => {
@@ -376,8 +384,8 @@ export default function FinanceView() {
                                 <label className="block text-sm font-medium text-slate-400 mb-2">金額</label>
                                 <input name="amount" type="number" required defaultValue={editingTransaction?.amount} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 12000" />
                             </div>
-                            <button type="submit" className={`w-full py-4 rounded-xl font-bold text-white shadow-lg ${addType === "income" ? "bg-gradient-to-r from-emerald-500 to-green-600" : "bg-gradient-to-r from-rose-500 to-red-600"}`}>
-                                {editingTransaction ? "更新する" : "記録する"}
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 rounded-xl font-bold text-white shadow-lg ${addType === "income" ? "bg-gradient-to-r from-emerald-500 to-green-600" : "bg-gradient-to-r from-rose-500 to-red-600"} ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>
+                                {isSaving ? "保存中..." : (editingTransaction ? "更新する" : "記録する")}
                             </button>
                         </form>
                     </div>
