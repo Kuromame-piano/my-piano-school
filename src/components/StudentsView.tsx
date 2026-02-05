@@ -278,24 +278,25 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     return (
         <div className="space-y-6">
-            <header className="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-gradient mb-2">生徒管理</h2>
-                    <p className="text-slate-400">生徒情報と練習中の曲を管理</p>
-                </div>
-                <div className="flex gap-3">
-                    <button
-                        onClick={() => setShowArchived(!showArchived)}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium border transition-colors ${showArchived ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"}`}
-                    >
-                        <Archive className="w-4 h-4" />
-                        {showArchived ? "アーカイブ済みを表示中" : "アーカイブ済みを表示"}
-                    </button>
-                    <button onClick={() => { setEditingStudent(null); setIsAddModalOpen(true); }} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
-                        <Plus className="w-5 h-5" />
-                        生徒を追加
+            <header className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gradient mb-1 sm:mb-2">生徒管理</h2>
+                        <p className="text-sm sm:text-base text-slate-400">生徒情報と練習中の曲を管理</p>
+                    </div>
+                    <button onClick={() => { setEditingStudent(null); setIsAddModalOpen(true); }} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 text-sm sm:text-base shrink-0">
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="hidden xs:inline">生徒を追加</span>
+                        <span className="xs:hidden">追加</span>
                     </button>
                 </div>
+                <button
+                    onClick={() => setShowArchived(!showArchived)}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${showArchived ? "bg-amber-500/20 border-amber-500/30 text-amber-300" : "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"}`}
+                >
+                    <Archive className="w-4 h-4" />
+                    {showArchived ? "アーカイブ中" : "アーカイブを表示"}
+                </button>
             </header>
 
             <div className="relative">
@@ -336,60 +337,60 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
             {/* Student Detail Modal */}
             {selectedStudent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-                    <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-8 max-h-[90vh] overflow-y-auto">
+                    <div className="relative z-10 w-full sm:max-w-2xl bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-4 sm:p-8 max-h-[90vh] overflow-y-auto safe-area-bottom">
                         <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
 
-                        <div className="flex items-start justify-between mb-8">
-                            <div className="flex items-center gap-5">
-                                <div className={`w-20 h-20 rounded-2xl ${selectedStudent.color} flex items-center justify-center text-white font-bold text-3xl shadow-xl`}>{selectedStudent.name[0]}</div>
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-2xl font-bold">{selectedStudent.name}</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
+                            <div className="flex items-center gap-3 sm:gap-5">
+                                <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl ${selectedStudent.color} flex items-center justify-center text-white font-bold text-xl sm:text-3xl shadow-xl shrink-0`}>{selectedStudent.name[0]}</div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="text-xl sm:text-2xl font-bold">{selectedStudent.name}</h3>
                                         {selectedStudent.archived && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">アーカイブ</span>}
                                     </div>
-                                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
-                                        <p className="text-slate-400 flex items-center gap-2"><Phone className="w-4 h-4" />{selectedStudent.phone}</p>
-                                        <p className="text-slate-500 flex items-center gap-2"><MapPin className="w-4 h-4" />{selectedStudent.address}</p>
-                                        {selectedStudent.email && <p className="text-slate-500 flex items-center gap-2"><Mail className="w-4 h-4" />{selectedStudent.email}</p>}
-                                        {selectedStudent.birthDate && <p className="text-slate-500 flex items-center gap-2"><Cake className="w-4 h-4" />{selectedStudent.birthDate}</p>}
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 sm:mt-2 text-xs sm:text-sm">
+                                        <p className="text-slate-400 flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{selectedStudent.phone}</p>
+                                        <p className="text-slate-500 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" />{selectedStudent.address}</p>
+                                        {selectedStudent.email && <p className="text-slate-500 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{selectedStudent.email}</p>}
+                                        {selectedStudent.birthDate && <p className="text-slate-500 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" />{selectedStudent.birthDate}</p>}
                                     </div>
                                     {(selectedStudent.parentName || selectedStudent.parentPhone) && (
-                                        <div className="mt-2 text-sm text-slate-500 flex items-center gap-2 border-t border-slate-800 pt-2">
-                                            <User className="w-4 h-4" />
+                                        <div className="mt-1.5 text-xs sm:text-sm text-slate-500 flex items-center gap-1.5 border-t border-slate-800 pt-1.5">
+                                            <User className="w-3.5 h-3.5" />
                                             <span>保護者: {selectedStudent.parentName} {selectedStudent.parentPhone && `(${selectedStudent.parentPhone})`}</span>
                                         </div>
                                     )}
                                     {selectedStudent.memo && (
-                                        <div className="mt-2 text-sm text-slate-400 italic bg-slate-800/30 p-2 rounded-lg">
+                                        <div className="mt-1.5 text-xs sm:text-sm text-slate-400 italic bg-slate-800/30 p-2 rounded-lg">
                                             <FileText className="w-3 h-3 inline mr-1" />
                                             {selectedStudent.memo}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 shrink-0">
                                 <button
                                     onClick={() => handleArchiveStudent(selectedStudent.id, !selectedStudent.archived)}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded-xl font-medium transition-colors ${selectedStudent.archived ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30" : "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"}`}
+                                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedStudent.archived ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30" : "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"}`}
                                 >
                                     {selectedStudent.archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                                    {selectedStudent.archived ? "復元" : "アーカイブ"}
+                                    <span className="hidden sm:inline">{selectedStudent.archived ? "復元" : "アーカイブ"}</span>
                                 </button>
-                                <button onClick={() => openEditModal(selectedStudent)} className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-medium transition-colors">
-                                    <Pencil className="w-4 h-4" /> 編集
+                                <button onClick={() => openEditModal(selectedStudent)} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors">
+                                    <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">編集</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Tabs */}
-                        <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit mb-6 flex-wrap">
-                            <button onClick={() => setActiveTab("active")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "active" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}><Music className="w-4 h-4" />練習中 ({selectedStudent.pieces.filter((p) => p.status === "active").length})</button>
-                            <button onClick={() => setActiveTab("completed")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "completed" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}><History className="w-4 h-4" />合格履歴 ({selectedStudent.pieces.filter((p) => p.status === "completed").length})</button>
-                            <button onClick={() => setActiveTab("notes")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "notes" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}><StickyNote className="w-4 h-4" />ノート</button>
-                            <button onClick={() => setActiveTab("progress")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "progress" ? "bg-pink-500/20 text-pink-300" : "text-slate-500 hover:text-slate-300"}`}><TrendingUp className="w-4 h-4" />上達グラフ</button>
-                            <button onClick={() => setActiveTab("textbooks")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${activeTab === "textbooks" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}><Book className="w-4 h-4" />教本管理</button>
+                        <div className="flex gap-1.5 sm:gap-2 p-1 bg-slate-800/50 rounded-xl mb-4 sm:mb-6 overflow-x-auto no-scrollbar">
+                            <button onClick={() => setActiveTab("active")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "active" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}><Music className="w-3.5 h-3.5 sm:w-4 sm:h-4" />練習中</button>
+                            <button onClick={() => setActiveTab("completed")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "completed" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}><History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />合格履歴</button>
+                            <button onClick={() => setActiveTab("notes")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "notes" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}><StickyNote className="w-3.5 h-3.5 sm:w-4 sm:h-4" />ノート</button>
+                            <button onClick={() => setActiveTab("progress")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "progress" ? "bg-pink-500/20 text-pink-300" : "text-slate-500 hover:text-slate-300"}`}><TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />上達</button>
+                            <button onClick={() => setActiveTab("textbooks")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "textbooks" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}><Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />教本</button>
                         </div>
 
                         {/* Tab Content */}

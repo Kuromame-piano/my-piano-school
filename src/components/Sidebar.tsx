@@ -54,15 +54,16 @@ export default function Sidebar({ activeView, onViewChange, isOpen = true, onClo
             <aside
                 className={`
                     fixed lg:static inset-y-0 left-0 z-50
-                    w-64 h-screen border-r border-slate-800 bg-slate-950 lg:bg-slate-950/50 
-                    p-6 flex flex-col shrink-0
+                    w-56 sm:w-64 h-screen border-r border-slate-800 bg-slate-950 lg:bg-slate-950/50 
+                    p-4 sm:p-6 flex flex-col shrink-0
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}
                     lg:translate-x-0
+                    safe-area-bottom
                 `}
             >
                 {/* ヘッダー（モバイル用閉じるボタン付き） */}
-                <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center justify-between mb-6 sm:mb-10">
                     <div className="flex items-center gap-3">
                         <div className="p-2 premium-gradient rounded-xl">
                             <Music className="w-6 h-6 text-white" />
@@ -90,9 +91,9 @@ export default function Sidebar({ activeView, onViewChange, isOpen = true, onClo
                             <button
                                 key={item.id}
                                 onClick={() => handleNavClick(item.id)}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${isActive
+                                className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${isActive
                                     ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
-                                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                                    : "text-slate-400 hover:text-white hover:bg-slate-800/50 active:bg-slate-700"
                                     }`}
                             >
                                 <Icon className="w-5 h-5" />

@@ -203,23 +203,25 @@ export default function ScheduleView() {
 
     return (
         <div className="space-y-6">
-            <header className="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-gradient mb-2">スケジュール</h2>
-                    <p className="text-slate-400">レッスンスケジュールを管理</p>
-                </div>
-                <div className="flex items-center gap-3">
-                    {/* View Mode Toggle */}
-                    <div className="flex gap-1 p-1 bg-slate-800/50 rounded-xl">
-                        <button onClick={() => setViewMode("month")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "month" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
-                            <Calendar className="w-4 h-4" />月
-                        </button>
-                        <button onClick={() => setViewMode("week")} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "week" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
-                            <CalendarDays className="w-4 h-4" />週
-                        </button>
+            <header className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl sm:text-3xl font-bold text-gradient mb-1 sm:mb-2">スケジュール</h2>
+                        <p className="text-sm sm:text-base text-slate-400">レッスンスケジュールを管理</p>
                     </div>
-                    <button onClick={openAddModal} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
-                        <Plus className="w-5 h-5" />レッスンを追加
+                    <button onClick={openAddModal} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 text-sm sm:text-base shrink-0">
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <span className="hidden xs:inline">レッスンを追加</span>
+                        <span className="xs:hidden">追加</span>
+                    </button>
+                </div>
+                {/* View Mode Toggle */}
+                <div className="flex gap-1 p-1 bg-slate-800/50 rounded-xl w-fit">
+                    <button onClick={() => setViewMode("month")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "month" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+                        <Calendar className="w-4 h-4" />月
+                    </button>
+                    <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "week" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
+                        <CalendarDays className="w-4 h-4" />週
                     </button>
                 </div>
             </header>
@@ -235,24 +237,24 @@ export default function ScheduleView() {
 
             {/* Week View */}
             {viewMode === "week" && (
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                     {getWeekDays().map((day, i) => {
                         const dayEvents = getEventsForDay(day);
                         const isToday = day.toDateString() === new Date().toDateString();
                         return (
-                            <div key={i} className={`glass-card p-3 min-h-[300px] ${isToday ? "ring-2 ring-violet-500/50" : ""}`}>
-                                <div className="text-center mb-3 pb-2 border-b border-slate-800">
-                                    <p className="text-sm text-slate-500">{dayNames[i]}</p>
-                                    <p className={`text-xl font-bold ${isToday ? "text-violet-400" : ""}`}>{day.getDate()}</p>
+                            <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-violet-500/50" : ""}`}>
+                                <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-slate-800">
+                                    <p className="text-xs sm:text-sm text-slate-500">{dayNames[i]}</p>
+                                    <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-violet-400" : ""}`}>{day.getDate()}</p>
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-1.5 sm:space-y-2">
                                     {dayEvents.length === 0 ? (
-                                        <p className="text-xs text-slate-600 text-center py-4">-</p>
+                                        <p className="text-xs text-slate-600 text-center py-2 sm:py-4">-</p>
                                     ) : (
                                         dayEvents.map((event, idx) => (
-                                            <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-slate-800/50 transition-colors`}>
-                                                <p className="text-xs text-violet-400 mb-0.5">{formatTime(event.start)}</p>
-                                                <p className="text-sm font-medium truncate">{event.title}</p>
+                                            <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-slate-800/50 transition-colors`}>
+                                                <p className="text-[10px] sm:text-xs text-violet-400 mb-0.5">{formatTime(event.start)}</p>
+                                                <p className="text-xs sm:text-sm font-medium truncate">{event.title}</p>
                                             </button>
                                         ))
                                     )}
@@ -293,9 +295,9 @@ export default function ScheduleView() {
 
             {/* Event Detail Modal */}
             {selectedEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
-                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
+                    <div className="relative z-10 w-full sm:max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom">
                         <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
 
                         <h3 className="text-2xl font-bold text-gradient mb-6">{selectedEvent.title}</h3>
