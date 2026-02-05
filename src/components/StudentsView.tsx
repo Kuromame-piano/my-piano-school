@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import {
     Plus,
     Search,
@@ -14,65 +15,22 @@ import {
     History,
 } from "lucide-react";
 
-interface Piece {
-    id: number;
-    title: string;
-    progress: number;
-    status: "active" | "completed";
-    startedAt: string;
-    completedAt?: string;
-}
+import { getStudents, saveStudent, Student } from "../actions/studentActions"; // Import from actions
 
-interface Student {
-    id: number;
-    name: string;
-    phone: string;
-    address: string;
-    lessonDay: string;
-    pieces: Piece[];
-    color: string;
-}
 
-const INITIAL_STUDENTS: Student[] = [
-    {
-        id: 1,
-        name: "田中 美咲",
-        phone: "090-1234-5678",
-        address: "江東区清澄白河",
-        lessonDay: "毎週火曜 14:00",
-        color: "bg-pink-500",
-        pieces: [
-            { id: 101, title: "月光ソナタ 第1楽章", progress: 75, status: "active", startedAt: "2026/01/10" },
-            { id: 102, title: "エリーゼのために", progress: 100, status: "completed", startedAt: "2025/10/01", completedAt: "2025/12/20" },
-        ],
-    },
-    {
-        id: 2,
-        name: "鈴木 健一",
-        phone: "080-9876-5432",
-        address: "中央区月島",
-        lessonDay: "毎週木曜 19:00",
-        color: "bg-blue-500",
-        pieces: [
-            { id: 201, title: "ノクターン Op.9-2", progress: 45, status: "active", startedAt: "2026/01/15" },
-        ],
-    },
-    {
-        id: 3,
-        name: "佐藤 由美",
-        phone: "070-5555-1234",
-        address: "江東区門前仲町",
-        lessonDay: "毎週土曜 10:00",
-        color: "bg-emerald-500",
-        pieces: [
-            { id: 301, title: "トルコ行進曲", progress: 90, status: "active", startedAt: "2025/11/01" },
-            { id: 302, title: "華麗なる大円舞曲", progress: 20, status: "active", startedAt: "2026/02/01" },
-        ],
-    },
-];
+// Local interfaces removed in favor of imported ones
+// INITIAL_STUDENTS removed
+
 
 export default function StudentsView() {
-    const [students, setStudents] = useState<Student[]>(INITIAL_STUDENTS);
+    const [students, setStudents] = useState<Student[]>([]);
+
+    // Fetch students on mount
+    useEffect(() => {
+        getStudents().then(setStudents);
+    }, []);
+
+
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -82,44 +40,78 @@ export default function StudentsView() {
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleUpdateProgress = (studentId: number, pieceId: number, progress: number) => {
+    const handleUpdateProgress = async (studentId: number, pieceId: number, progress: number) => {
+        let updatedStudent: Student | undefined;
         setStudents((prev) =>
-            prev.map((s) =>
-                s.id === studentId
-                    ? { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)) }
-                    : s
-            )
+            prev.map((s) => {
+                if (s.id === studentId) {
+                    updatedStudent = { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)) };
+                    return updatedStudent;
+                }
+                return s;
+            })
         );
+
         if (selectedStudent?.id === studentId) {
             setSelectedStudent((prev) =>
                 prev ? { ...prev, pieces: prev.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)) } : null
             );
         }
+
+        if (updatedStudent) {
+            await saveStudent(updatedStudent);
+        }
     };
 
-    const handleCompletePiece = (studentId: number, pieceId: number) => {
+    const handleCompletePiece = async (studentId: number, pieceId: number) => {
         const today = new Date().toLocaleDateString("ja-JP");
+        let updatedStudent: Student | undefined;
+
         setStudents((prev) =>
-            prev.map((s) =>
-                s.id === studentId
-                    ? { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, status: "completed", progress: 100, completedAt: today } : p)) }
-                    : s
-            )
+            prev.map((s) => {
+                if (s.id === studentId) {
+                    updatedStudent = { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, status: "completed", progress: 100, completedAt: today } : p)) };
+                    return updatedStudent;
+                }
+                return s;
+            })
         );
+
         if (selectedStudent?.id === studentId) {
             setSelectedStudent((prev) =>
                 prev ? { ...prev, pieces: prev.pieces.map((p) => (p.id === pieceId ? { ...p, status: "completed", progress: 100, completedAt: today } : p)) } : null
             );
         }
+
+        if (updatedStudent) {
+            await saveStudent(updatedStudent);
+        }
     };
 
-    const handleAddPiece = (studentId: number) => {
+    const handleAddPiece = async (studentId: number) => {
         const title = prompt("新しい曲名を入力してください");
         if (!title) return;
-        const newPiece: Piece = { id: Date.now(), title, progress: 0, status: "active", startedAt: new Date().toLocaleDateString("ja-JP") };
-        setStudents((prev) => prev.map((s) => (s.id === studentId ? { ...s, pieces: [newPiece, ...s.pieces] } : s)));
+        // Need to import Piece interface? Or just match structure.
+        // Piece is exported from studentActions? No, it's not exported. 
+        // Let's rely on standard object literal matching Student.pieces type.
+        const newPiece = { id: Date.now(), title, progress: 0, status: "active" as const, startedAt: new Date().toLocaleDateString("ja-JP") };
+
+        let updatedStudent: Student | undefined;
+
+        setStudents((prev) => prev.map((s) => {
+            if (s.id === studentId) {
+                updatedStudent = { ...s, pieces: [newPiece, ...s.pieces] };
+                return updatedStudent;
+            }
+            return s;
+        }));
+
         if (selectedStudent?.id === studentId) {
             setSelectedStudent((prev) => (prev ? { ...prev, pieces: [newPiece, ...prev.pieces] } : null));
+        }
+
+        if (updatedStudent) {
+            await saveStudent(updatedStudent);
         }
     };
 
@@ -223,7 +215,24 @@ export default function StudentsView() {
                     <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
                         <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">新規生徒の登録</h3>
-                        <form onSubmit={(e) => { e.preventDefault(); const form = e.target as HTMLFormElement; const formData = new FormData(form); const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"]; const newStudent: Student = { id: Date.now(), name: formData.get("name") as string, phone: formData.get("phone") as string, address: formData.get("address") as string, lessonDay: formData.get("lessonDay") as string, color: colors[Math.floor(Math.random() * colors.length)], pieces: [] }; setStudents([newStudent, ...students]); setIsAddModalOpen(false); }} className="space-y-5">
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const form = e.target as HTMLFormElement;
+                            const formData = new FormData(form);
+                            const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
+                            const newStudent: Student = {
+                                id: Date.now(),
+                                name: formData.get("name") as string,
+                                phone: formData.get("phone") as string,
+                                address: formData.get("address") as string,
+                                lessonDay: formData.get("lessonDay") as string,
+                                color: colors[Math.floor(Math.random() * colors.length)],
+                                pieces: []
+                            };
+                            setStudents([newStudent, ...students]);
+                            setIsAddModalOpen(false);
+                            await saveStudent(newStudent);
+                        }} className="space-y-5">
                             <div><label className="block text-sm font-medium text-slate-400 mb-2">お名前</label><input name="name" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 花子" /></div>
                             <div><label className="block text-sm font-medium text-slate-400 mb-2">電話番号</label><input name="phone" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-1234-5678" /></div>
                             <div><label className="block text-sm font-medium text-slate-400 mb-2">住所（出張先）</label><input name="address" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 江東区清澄白河" /></div>

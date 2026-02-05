@@ -2,18 +2,66 @@
 
 import { Users, Wallet, Calendar, TrendingUp } from "lucide-react";
 
-const STATS = [
-    { label: "生徒数", value: "3", icon: Users, color: "text-pink-400" },
-    { label: "今月の収入", value: "¥36,000", icon: Wallet, color: "text-emerald-400" },
-    { label: "今日のレッスン", value: "2", icon: Calendar, color: "text-violet-400" },
-];
+import { getStudents } from "../actions/studentActions";
+import { getTransactions } from "../actions/financeActions";
+import { getUpcomingLessons } from "../actions/calendarActions";
+import { useEffect, useState } from "react";
 
-const RECENT_LESSONS = [
-    { name: "田中 美咲", piece: "月光ソナタ 第1楽章", time: "14:00", color: "bg-pink-500" },
-    { name: "鈴木 健一", piece: "ノクターン Op.9-2", time: "19:00", color: "bg-blue-500" },
-];
 
 export default function DashboardView() {
+    const [stats, setStats] = useState({
+        studentCount: 0,
+        monthlyIncome: 0,
+        todayLessonsCount: 0
+    });
+    const [todaysLessons, setTodaysLessons] = useState<any[]>([]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            const [students, transactions, events] = await Promise.all([
+                getStudents(),
+                getTransactions(),
+                getUpcomingLessons()
+            ]);
+
+            // Calculate Student Count
+            const studentCount = students.length;
+
+            // Calculate Monthly Income
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const monthlyIncome = transactions
+                .filter(t => t.type === 'income' && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            // Calculate Today's Lessons
+            // Simple check if start date is today
+            const todayStr = now.toISOString().split('T')[0];
+            const todayEvents = events.filter(e => e.start.startsWith(todayStr));
+
+            setStats({
+                studentCount,
+                monthlyIncome,
+                todayLessonsCount: todayEvents.length
+            });
+
+            setTodaysLessons(todayEvents.map(e => ({
+                name: e.title, // Assuming Title is Student Name for now
+                piece: e.description || "練習曲（未設定）",
+                time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                color: "bg-violet-500" // Default color since we can't easily map back to student color without more logic
+            })));
+        };
+        fetchData();
+    }, []);
+
+    const statItems = [
+        { label: "生徒数", value: stats.studentCount.toString(), icon: Users, color: "text-pink-400" },
+        { label: "今月の収入", value: `¥${stats.monthlyIncome.toLocaleString()}`, icon: Wallet, color: "text-emerald-400" },
+        { label: "今日のレッスン", value: stats.todayLessonsCount.toString(), icon: Calendar, color: "text-violet-400" },
+    ];
+
     return (
         <div className="space-y-8">
             {/* Header */}
@@ -24,7 +72,7 @@ export default function DashboardView() {
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {STATS.map((stat) => {
+                {statItems.map((stat) => {
                     const Icon = stat.icon;
                     return (
                         <div key={stat.label} className="glass-card p-5 flex items-center gap-4">
@@ -40,6 +88,7 @@ export default function DashboardView() {
                 })}
             </div>
 
+
             {/* Today's Schedule */}
             <section>
                 <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -47,20 +96,26 @@ export default function DashboardView() {
                     今日のレッスン
                 </h3>
                 <div className="glass-card divide-y divide-slate-800">
-                    {RECENT_LESSONS.map((lesson) => (
-                        <div key={lesson.name} className="p-4 flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl ${lesson.color} flex items-center justify-center text-white font-bold text-lg`}>
-                                {lesson.name[0]}
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium">{lesson.name}</p>
-                                <p className="text-sm text-slate-500">{lesson.piece}</p>
-                            </div>
-                            <span className="text-sm font-medium text-violet-400 bg-violet-500/10 px-3 py-1 rounded-full">
-                                {lesson.time}
-                            </span>
-                        </div>
-                    ))}
+                    <div className="glass-card divide-y divide-slate-800">
+                        {todaysLessons.length === 0 ? (
+                            <div className="p-4 text-center text-slate-500">今日のレッスンはありません</div>
+                        ) : (
+                            todaysLessons.map((lesson, i) => (
+                                <div key={i} className="p-4 flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-xl ${lesson.color} flex items-center justify-center text-white font-bold text-lg`}>
+                                        {lesson.name[0]}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium">{lesson.name}</p>
+                                        <p className="text-sm text-slate-500">{lesson.piece}</p>
+                                    </div>
+                                    <span className="text-sm font-medium text-violet-400 bg-violet-500/10 px-3 py-1 rounded-full">
+                                        {lesson.time}
+                                    </span>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </section>
 

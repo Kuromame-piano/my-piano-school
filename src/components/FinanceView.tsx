@@ -1,29 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import { Plus, Wallet, TrendingUp, TrendingDown, Download, X } from "lucide-react";
+import { getTransactions, addTransaction, Transaction } from "../actions/financeActions"; // Import actions
+import { useState, useEffect } from "react";
 
-interface Transaction {
-    id: number;
-    type: "income" | "expense";
-    category: string;
-    description: string;
-    amount: number;
-    date: string;
-    studentName?: string;
-}
 
-const INITIAL_TRANSACTIONS: Transaction[] = [
-    { id: 1, type: "income", category: "月謝", description: "2月分月謝", amount: 12000, date: "2026/02/01", studentName: "田中 美咲" },
-    { id: 2, type: "income", category: "月謝", description: "2月分月謝", amount: 12000, date: "2026/02/01", studentName: "鈴木 健一" },
-    { id: 3, type: "expense", category: "交通費", description: "清澄白河 往復", amount: 480, date: "2026/02/04" },
-    { id: 4, type: "expense", category: "教材", description: "ブルグミュラー25の練習曲", amount: 1200, date: "2026/02/03" },
-    { id: 5, type: "income", category: "月謝", description: "2月分月謝", amount: 12000, date: "2026/02/02", studentName: "佐藤 由美" },
-    { id: 6, type: "expense", category: "交通費", description: "月島 往復", amount: 360, date: "2026/02/05" },
-];
+
 
 export default function FinanceView() {
-    const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+    useEffect(() => {
+        getTransactions().then(setTransactions);
+    }, []);
+
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addType, setAddType] = useState<"income" | "expense">("expense");
     const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
@@ -103,7 +93,23 @@ export default function FinanceView() {
                             <button onClick={() => setAddType("income")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "income" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500"}`}>収入</button>
                             <button onClick={() => setAddType("expense")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "expense" ? "bg-rose-500/20 text-rose-300" : "text-slate-500"}`}>支出</button>
                         </div>
-                        <form onSubmit={(e) => { e.preventDefault(); const form = e.target as HTMLFormElement; const formData = new FormData(form); const newTx: Transaction = { id: Date.now(), type: addType, category: formData.get("category") as string, description: formData.get("description") as string, amount: parseInt(formData.get("amount") as string) || 0, date: new Date().toLocaleDateString("ja-JP"), studentName: addType === "income" ? (formData.get("studentName") as string) : undefined }; setTransactions([newTx, ...transactions]); setIsAddModalOpen(false); }} className="space-y-5">
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const form = e.target as HTMLFormElement;
+                            const formData = new FormData(form);
+                            const newTx: Transaction = {
+                                id: Date.now(),
+                                type: addType,
+                                category: formData.get("category") as string,
+                                description: formData.get("description") as string,
+                                amount: parseInt(formData.get("amount") as string) || 0,
+                                date: new Date().toLocaleDateString("ja-JP"),
+                                studentName: addType === "income" ? (formData.get("studentName") as string) : undefined
+                            };
+                            setTransactions([newTx, ...transactions]);
+                            setIsAddModalOpen(false);
+                            await addTransaction(newTx);
+                        }} className="space-y-5">
                             <div><label className="block text-sm font-medium text-slate-400 mb-2">カテゴリ</label><select name="category" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">{addType === "income" ? <option value="月謝">月謝</option> : <><option value="交通費">交通費</option><option value="教材">教材</option><option value="その他">その他</option></>}</select></div>
                             {addType === "income" && <div><label className="block text-sm font-medium text-slate-400 mb-2">生徒名</label><input name="studentName" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 田中 美咲" /></div>}
                             <div><label className="block text-sm font-medium text-slate-400 mb-2">内容</label><input name="description" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder={addType === "income" ? "例: 2月分月謝" : "例: 清澄白河 往復"} /></div>
