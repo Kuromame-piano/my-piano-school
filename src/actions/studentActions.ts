@@ -35,6 +35,18 @@ export interface Student {
     memo?: string;
     archived?: boolean;
     lessonNotes?: LessonNote[];
+    gradeLevel?: string;
+    status?: string;
+    recitalHistory?: RecitalRecord[];
+}
+
+export interface RecitalRecord {
+    id: number;
+    date: string;
+    eventName: string;
+    piece: string;
+    venue?: string;
+    memo?: string;
 }
 
 const SHEET_NAME = "Students";
@@ -53,7 +65,7 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A2:M`,
+            range: `${SHEET_NAME}!A2:P`,
         });
 
         const rows = response.data.values;
@@ -73,6 +85,9 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
             birthDate: row[10] || "",
             memo: row[11] || "",
             archived: row[12] === "TRUE" || row[12] === "true",
+            gradeLevel: row[13] || "",
+            status: row[14] || "継続中",
+            recitalHistory: row[15] ? JSON.parse(row[15]) : [],
         }));
 
         const result = includeArchived ? students : students.filter((s) => !s.archived);
@@ -113,13 +128,16 @@ export async function saveStudent(student: Student) {
             student.birthDate || "",
             student.memo || "",
             student.archived || false,
+            student.gradeLevel || "",
+            student.status || "継続中",
+            JSON.stringify(student.recitalHistory || []),
         ];
 
         if (existingIndex !== -1) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${SHEET_NAME}!A${rowNumber}:M${rowNumber}`,
+                range: `${SHEET_NAME}!A${rowNumber}:P${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],

@@ -24,6 +24,7 @@ import {
     Trash2,
     ImagePlus,
     Book,
+    Trophy,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
@@ -35,10 +36,11 @@ import {
     deleteLessonNote,
     getStudentProgress,
     Student,
+    RecitalRecord,
 } from "../actions/studentActions";
 import { getTextbooks, getTextbookProgress, saveTextbookProgress, Textbook, TextbookProgress } from "../actions/textbookActions";
 
-type DetailTab = "active" | "completed" | "notes" | "progress" | "textbooks";
+type DetailTab = "active" | "completed" | "notes" | "progress" | "textbooks" | "recital";
 
 interface StudentsViewProps {
     initialStudentId?: number | null;
@@ -101,6 +103,9 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     const [textbookProgress, setTextbookProgress] = useState<(TextbookProgress & { textbookTitle: string; totalPages: number })[]>([]);
     const [isAddTextbookModalOpen, setIsAddTextbookModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Recital
+    const [isAddRecitalModalOpen, setIsAddRecitalModalOpen] = useState(false);
 
     const filteredStudents = students.filter((s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -325,12 +330,16 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {filteredStudents.map((student) => (
-                        <button key={student.id} onClick={() => { setSelectedStudent(student); setActiveTab("active"); }} className={`glass-card p-5 text-left hover:bg-slate-800/50 transition-all group ${student.archived ? "opacity-60" : ""}`}>
+                        <button key={student.id} onClick={() => { setSelectedStudent(student); setActiveTab("active"); }} className={`glass-card p-5 text-left hover:bg-slate-800/50 transition-all group ${student.archived ? "opacity-60" : ""} ${student.status === "休会中" ? "border-amber-500/30" : ""} ${student.status === "退会" ? "border-rose-500/30" : ""}`}>
                             <div className="flex items-start gap-4">
                                 <div className={`w-14 h-14 rounded-xl ${student.color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>{student.name[0]}</div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <p className="font-semibold text-lg truncate">{student.name}</p>
+                                        {student.gradeLevel && <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">{student.gradeLevel}</span>}
+                                        {student.status && student.status !== "継続中" && (
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${student.status === "休会中" ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400"}`}>{student.status}</span>
+                                        )}
                                         {student.archived && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">アーカイブ</span>}
                                     </div>
                                     <p className="text-sm text-slate-400 flex items-center gap-1.5 mt-1"><Calendar className="w-3.5 h-3.5" />{student.lessonDay}</p>
@@ -355,15 +364,19 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             {selectedStudent && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-                    <div className="relative z-10 w-full sm:max-w-2xl bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-4 sm:p-8 max-h-[90vh] overflow-y-auto safe-area-bottom">
-                        <button onClick={() => setSelectedStudent(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="relative z-10 w-full sm:max-w-4xl bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-4 sm:p-8 max-h-[90vh] overflow-y-auto safe-area-bottom">
+                        <button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 z-20 p-2 text-slate-500 hover:text-white bg-slate-800/80 rounded-full"><X className="w-5 h-5" /></button>
 
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 sm:mb-8">
-                            <div className="flex items-center gap-3 sm:gap-5">
+                        <div className="mb-6 sm:mb-8">
+                            <div className="flex items-start gap-3 sm:gap-5 pr-10">
                                 <div className={`w-14 h-14 sm:w-20 sm:h-20 rounded-2xl ${selectedStudent.color} flex items-center justify-center text-white font-bold text-xl sm:text-3xl shadow-xl shrink-0`}>{selectedStudent.name[0]}</div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-xl sm:text-2xl font-bold">{selectedStudent.name}</h3>
+                                        {selectedStudent.gradeLevel && <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">{selectedStudent.gradeLevel}</span>}
+                                        {selectedStudent.status && selectedStudent.status !== "継続中" && (
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${selectedStudent.status === "休会中" ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400"}`}>{selectedStudent.status}</span>
+                                        )}
                                         {selectedStudent.archived && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">アーカイブ</span>}
                                     </div>
                                     <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 sm:mt-2 text-xs sm:text-sm">
@@ -386,7 +399,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                     )}
                                 </div>
                             </div>
-                            <div className="flex gap-2 shrink-0">
+                            <div className="flex gap-2 mt-4">
                                 <button
                                     onClick={() => handleArchiveStudent(selectedStudent.id, !selectedStudent.archived)}
                                     className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedStudent.archived ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30" : "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"}`}
@@ -407,10 +420,11 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             <button onClick={() => setActiveTab("notes")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "notes" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}><StickyNote className="w-3.5 h-3.5 sm:w-4 sm:h-4" />ノート</button>
                             <button onClick={() => setActiveTab("progress")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "progress" ? "bg-pink-500/20 text-pink-300" : "text-slate-500 hover:text-slate-300"}`}><TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />上達</button>
                             <button onClick={() => setActiveTab("textbooks")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "textbooks" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}><Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />教本</button>
+                            <button onClick={() => setActiveTab("recital")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "recital" ? "bg-rose-500/20 text-rose-300" : "text-slate-500 hover:text-slate-300"}`}><Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />発表会</button>
                         </div>
 
                         {/* Tab Content */}
-                        <div className="space-y-4">
+                        <div className="space-y-4 min-h-[300px] sm:min-h-[400px]">
                             {activeTab === "active" && (
                                 <>
                                     <button onClick={() => openAddPieceModal(selectedStudent.id)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-violet-500/50 rounded-xl text-slate-500 hover:text-violet-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />新しい曲を追加</button>
@@ -536,6 +550,36 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                     )}
                                 </>
                             )}
+
+                            {activeTab === "recital" && (
+                                <>
+                                    <button onClick={() => setIsAddRecitalModalOpen(true)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-rose-500/50 rounded-xl text-slate-500 hover:text-rose-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />発表会履歴を追加</button>
+                                    {(!selectedStudent.recitalHistory || selectedStudent.recitalHistory.length === 0) ? (
+                                        <p className="text-center py-8 text-slate-600">発表会履歴はまだありません</p>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            {selectedStudent.recitalHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((record) => (
+                                                <div key={record.id} className="glass-card p-5">
+                                                    <div className="flex justify-between items-start mb-3">
+                                                        <div>
+                                                            <h4 className="font-semibold text-lg flex items-center gap-2">
+                                                                <Trophy className="w-5 h-5 text-rose-400" />
+                                                                {record.eventName}
+                                                            </h4>
+                                                            <p className="text-sm text-slate-500">{record.date}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2 text-sm">
+                                                        <p className="text-slate-300"><span className="text-slate-500">演奏曲:</span> {record.piece}</p>
+                                                        {record.venue && <p className="text-slate-400"><span className="text-slate-500">会場:</span> {record.venue}</p>}
+                                                        {record.memo && <p className="text-slate-400 italic">{record.memo}</p>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -568,9 +612,12 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                     parentName: formData.get("parentName") as string,
                                     parentPhone: formData.get("parentPhone") as string,
                                     memo: formData.get("memo") as string,
+                                    gradeLevel: formData.get("gradeLevel") as string,
+                                    status: formData.get("status") as string,
                                     color: editingStudent ? editingStudent.color : colors[Math.floor(Math.random() * colors.length)],
                                     pieces: editingStudent ? editingStudent.pieces : [],
                                     archived: editingStudent?.archived || false,
+                                    recitalHistory: editingStudent?.recitalHistory || [],
                                 };
 
                                 await saveStudent(newStudentData);
@@ -592,8 +639,55 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 </div>
                                 <div className="space-y-4">
                                     <h4 className="font-semibold text-slate-300 border-b border-slate-700 pb-2 mb-4">詳細情報</h4>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">レッスン日時</label><input name="lessonDay" defaultValue={editingStudent?.lessonDay} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 毎週火曜 14:00" /></div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">生年月日</label><input name="birthDate" type="date" defaultValue={editingStudent?.birthDate} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" /></div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">レッスン日時</label>
+                                        <input name="lessonDay" defaultValue={editingStudent?.lessonDay} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 毎週火曜 14:00" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">生年月日</label>
+                                        <input name="birthDate" type="date" defaultValue={editingStudent?.birthDate} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">学年</label>
+                                        <select name="gradeLevel" defaultValue={editingStudent?.gradeLevel || ""} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50">
+                                            <option value="">選択してください</option>
+                                            <optgroup label="未就学">
+                                                <option value="年少">年少</option>
+                                                <option value="年中">年中</option>
+                                                <option value="年長">年長</option>
+                                            </optgroup>
+                                            <optgroup label="小学生">
+                                                <option value="小1">小学1年</option>
+                                                <option value="小2">小学2年</option>
+                                                <option value="小3">小学3年</option>
+                                                <option value="小4">小学4年</option>
+                                                <option value="小5">小学5年</option>
+                                                <option value="小6">小学6年</option>
+                                            </optgroup>
+                                            <optgroup label="中学生">
+                                                <option value="中1">中学1年</option>
+                                                <option value="中2">中学2年</option>
+                                                <option value="中3">中学3年</option>
+                                            </optgroup>
+                                            <optgroup label="高校生">
+                                                <option value="高1">高校1年</option>
+                                                <option value="高2">高校2年</option>
+                                                <option value="高3">高校3年</option>
+                                            </optgroup>
+                                            <optgroup label="その他">
+                                                <option value="大学生">大学生</option>
+                                                <option value="社会人">社会人</option>
+                                            </optgroup>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">ステータス</label>
+                                        <select name="status" defaultValue={editingStudent?.status || "継続中"} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50">
+                                            <option value="継続中">継続中</option>
+                                            <option value="休会中">休会中</option>
+                                            <option value="退会">退会</option>
+                                        </select>
+                                    </div>
                                     <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者氏名</label><input name="parentName" defaultValue={editingStudent?.parentName} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 太郎" /></div>
                                     <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者電話番号</label><input name="parentPhone" defaultValue={editingStudent?.parentPhone} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-0000-0000" /></div>
                                 </div>
@@ -670,6 +764,66 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">現在のページ</label>
                                 <input name="currentPage" type="number" min="0" defaultValue="0" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                            </div>
+                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Recital Modal */}
+            {isAddRecitalModalOpen && selectedStudent && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddRecitalModalOpen(false)} />
+                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
+                        <button onClick={() => setIsAddRecitalModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                        <h3 className="text-2xl font-bold text-gradient mb-6">発表会履歴を追加</h3>
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!selectedStudent || isSaving) return;
+                            setIsSaving(true);
+                            try {
+                                const form = e.target as HTMLFormElement;
+                                const formData = new FormData(form);
+                                const newRecord: RecitalRecord = {
+                                    id: Date.now(),
+                                    date: formData.get("date") as string,
+                                    eventName: formData.get("eventName") as string,
+                                    piece: formData.get("piece") as string,
+                                    venue: formData.get("venue") as string || undefined,
+                                    memo: formData.get("memo") as string || undefined,
+                                };
+                                const updatedStudent = {
+                                    ...selectedStudent,
+                                    recitalHistory: [...(selectedStudent.recitalHistory || []), newRecord],
+                                };
+                                await saveStudent(updatedStudent);
+                                setSelectedStudent(updatedStudent);
+                                setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
+                                setIsAddRecitalModalOpen(false);
+                            } finally {
+                                setIsSaving(false);
+                            }
+                        }} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">発表会名 <span className="text-red-400">*</span></label>
+                                <input name="eventName" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 第10回 ピアノ発表会" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">開催日 <span className="text-red-400">*</span></label>
+                                <input name="date" type="date" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">演奏曲 <span className="text-red-400">*</span></label>
+                                <input name="piece" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">会場</label>
+                                <input name="venue" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 東京文化会館" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-2">備考</label>
+                                <textarea name="memo" rows={2} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 初めての発表会、上手に演奏できた" />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
