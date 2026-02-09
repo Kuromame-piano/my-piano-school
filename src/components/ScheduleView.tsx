@@ -21,6 +21,7 @@ export default function ScheduleView() {
     const [lessonDuration, setLessonDuration] = useState(45);
     const [startTime, setStartTime] = useState("");
     const [endTime, setEndTime] = useState("");
+    const [miniCalendarDate, setMiniCalendarDate] = useState(new Date());
 
     const fetchEvents = async () => {
         const year = currentDate.getFullYear();
@@ -56,6 +57,51 @@ export default function ScheduleView() {
         };
         loadData();
     }, [currentDate, viewMode]);
+
+    // Sync mini calendar with current date
+    useEffect(() => {
+        setMiniCalendarDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+    }, [currentDate]);
+
+    // Fetch events for mini calendar month (for event count dots)
+    useEffect(() => {
+        const fetchMiniCalendarEvents = async () => {
+            const year = miniCalendarDate.getFullYear();
+            const month = miniCalendarDate.getMonth();
+            const startDate = new Date(year, month, 1);
+            const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+
+            // Only fetch if different from current view
+            if (viewMode === "month" &&
+                currentDate.getFullYear() === year &&
+                currentDate.getMonth() === month) {
+                return; // Already have the data
+            }
+
+            if (viewMode === "week") {
+                const weekStart = getWeekStart(currentDate);
+                const weekEnd = getWeekEnd(currentDate);
+
+                // Check if mini calendar month overlaps with current week
+                if (startDate <= weekEnd && endDate >= weekStart) {
+                    return; // Already have the data
+                }
+            }
+
+            // Fetch mini calendar month events in background
+            const miniEvents = await getLessons(startDate.toISOString(), endDate.toISOString());
+            // Merge with existing events without duplicates
+            setEvents(prev => {
+                const existingIds = new Set(prev.map(e => e.id));
+                const newEvents = miniEvents.filter(e => !existingIds.has(e.id));
+                return [...prev, ...newEvents];
+            });
+        };
+
+        if (mounted) {
+            fetchMiniCalendarEvents();
+        }
+    }, [miniCalendarDate, mounted]);
 
     const handlePrev = () => {
         if (viewMode === "month") {
@@ -199,6 +245,86 @@ export default function ScheduleView() {
     const dayNames = ["月", "火", "水", "木", "金", "土", "日"];
     const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
 
+    // Mini calendar functions
+    const getMiniCalendarDays = () => {
+        const year = miniCalendarDate.getFullYear();
+        const month = miniCalendarDate.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+
+        // 月曜日始まりに調整
+        const startDayOfWeek = firstDay.getDay();
+        const adjustedStart = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+
+        const days = [];
+
+        // 前月の日付で埋める
+        for (let i = adjustedStart - 1; i >= 0; i--) {
+            const date = new Date(year, month, -i);
+            days.push({ date, isCurrentMonth: false });
+        }
+
+        // 今月の日付
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            const date = new Date(year, month, i);
+            days.push({ date, isCurrentMonth: true });
+        }
+
+        // 次月の日付で埋める（42日分になるまで）
+        const remaining = 42 - days.length;
+        for (let i = 1; i <= remaining; i++) {
+            const date = new Date(year, month + 1, i);
+            days.push({ date, isCurrentMonth: false });
+        }
+
+        return days;
+    };
+
+    const getWeekStart = (date: Date) => {
+        const dayOfWeek = date.getDay();
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const monday = new Date(date);
+        monday.setDate(date.getDate() + diff);
+        monday.setHours(0, 0, 0, 0);
+        return monday;
+    };
+
+    const getWeekEnd = (date: Date) => {
+        const weekStart = getWeekStart(date);
+        const sunday = new Date(weekStart);
+        sunday.setDate(weekStart.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        return sunday;
+    };
+
+    const isDateInCurrentWeek = (date: Date) => {
+        const weekStart = getWeekStart(currentDate);
+        const weekEnd = getWeekEnd(currentDate);
+        return date >= weekStart && date <= weekEnd;
+    };
+
+    const handleMiniCalendarClick = (date: Date) => {
+        setCurrentDate(date);
+        if (viewMode === "month") {
+            setViewMode("week");
+        }
+    };
+
+    const handleMiniCalendarPrev = () => {
+        setMiniCalendarDate(new Date(miniCalendarDate.getFullYear(), miniCalendarDate.getMonth() - 1, 1));
+    };
+
+    const handleMiniCalendarNext = () => {
+        setMiniCalendarDate(new Date(miniCalendarDate.getFullYear(), miniCalendarDate.getMonth() + 1, 1));
+    };
+
+    const getEventCountForDate = (date: Date) => {
+        return events.filter(e => {
+            const eventDate = new Date(e.start);
+            return eventDate.toDateString() === date.toDateString();
+        }).length;
+    };
+
     if (!mounted) return null;
 
     return (
@@ -235,63 +361,132 @@ export default function ScheduleView() {
                 <button onClick={handleNext} className="p-2 hover:bg-pink-50 rounded-lg transition-colors"><ChevronRight className="w-5 h-5 text-gray-600" /></button>
             </div>
 
-            {/* Week View */}
-            {viewMode === "week" && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                    {getWeekDays().map((day, i) => {
-                        const dayEvents = getEventsForDay(day);
-                        const isToday = day.toDateString() === new Date().toDateString();
-                        return (
-                            <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-pink-400" : ""}`}>
-                                <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-pink-100">
-                                    <p className="text-xs sm:text-sm text-gray-500">{dayNames[i]}</p>
-                                    <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-pink-500" : "text-gray-700"}`}>{day.getDate()}</p>
-                                </div>
-                                <div className="space-y-1.5 sm:space-y-2">
-                                    {dayEvents.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-2 sm:py-4">-</p>
-                                    ) : (
-                                        dayEvents.map((event, idx) => (
-                                            <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-pink-50 transition-colors`}>
-                                                <p className="text-[10px] sm:text-xs text-pink-500 mb-0.5">{formatTime(event.start)}</p>
-                                                <p className="text-xs sm:text-sm font-medium truncate text-gray-700">{event.title}</p>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+            {/* Layout: Mini Calendar + Schedule */}
+            <div className="grid grid-cols-1 lg:grid-cols-[200px,1fr] gap-4">
+                {/* Mini Calendar */}
+                <div className="glass-card p-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <button onClick={handleMiniCalendarPrev} className="p-0.5 hover:bg-pink-50 rounded transition-colors">
+                            <ChevronLeft className="w-3 h-3 text-gray-600" />
+                        </button>
+                        <h3 className="font-medium text-xs text-gray-700">
+                            {miniCalendarDate.getMonth() + 1}月
+                        </h3>
+                        <button onClick={handleMiniCalendarNext} className="p-0.5 hover:bg-pink-50 rounded transition-colors">
+                            <ChevronRight className="w-3 h-3 text-gray-600" />
+                        </button>
+                    </div>
 
-            {/* Month View */}
-            {viewMode === "month" && (
-                <div className="space-y-4">
-                    {events.length === 0 ? (
-                        <div className="glass-card p-12 text-center"><p className="text-gray-400">この月の予定はありません</p></div>
-                    ) : (
-                        <div className="space-y-3">
-                            {events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map((event, index) => (
-                                <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-5 flex gap-5 text-left hover:bg-pink-50 transition-all">
-                                    <div className="flex flex-col items-center min-w-[60px]">
-                                        <div className="text-sm text-gray-500">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
-                                        <div className="text-xl font-bold text-gray-700">{new Date(event.start).getDate()}</div>
-                                    </div>
-                                    <div className="w-0.5 bg-pink-200 self-stretch mx-2" />
-                                    <div className="flex-1">
-                                        <div className="flex items-start justify-between mb-2">
-                                            <h4 className="text-lg font-semibold text-gray-700">{event.title}</h4>
-                                            <span className="text-sm font-medium text-pink-600 bg-pink-100 px-3 py-1 rounded-full">{formatTime(event.start)}</span>
-                                        </div>
-                                        {event.location && <p className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.location}</p>}
-                                    </div>
+                    {/* Day headers */}
+                    <div className="grid grid-cols-7 gap-px mb-1">
+                        {["月", "火", "水", "木", "金", "土", "日"].map((day, i) => (
+                            <div key={i} className="text-center text-[9px] font-medium text-gray-400">
+                                {day}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar days */}
+                    <div className="grid grid-cols-7 gap-px">
+                        {getMiniCalendarDays().map((dayInfo, i) => {
+                            const isToday = dayInfo.date.toDateString() === new Date().toDateString();
+                            const isInCurrentWeek = isDateInCurrentWeek(dayInfo.date);
+                            const eventCount = getEventCountForDate(dayInfo.date);
+
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => handleMiniCalendarClick(dayInfo.date)}
+                                    className={`
+                                        relative aspect-square flex items-center justify-center rounded text-[9px] transition-all
+                                        ${!dayInfo.isCurrentMonth ? "text-gray-300" : "text-gray-700"}
+                                        ${isToday ? "bg-pink-500 text-white font-bold hover:bg-pink-600" : "hover:bg-pink-50"}
+                                        ${isInCurrentWeek && !isToday ? "bg-pink-100 font-medium" : ""}
+                                    `}
+                                >
+                                    {dayInfo.date.getDate()}
+                                    {eventCount > 0 && !isToday && (
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0.5 h-0.5 rounded-full bg-pink-500" />
+                                    )}
                                 </button>
-                            ))}
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-pink-100 space-y-1">
+                        <div className="flex items-center gap-1 text-[9px] text-gray-500">
+                            <div className="w-2 h-2 bg-pink-500 rounded-sm"></div>
+                            <span>今日</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[9px] text-gray-500">
+                            <div className="w-2 h-2 bg-pink-100 rounded-sm"></div>
+                            <span>選択週</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Schedule Content */}
+                <div>
+
+                    {/* Week View */}
+                    {viewMode === "week" && (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                            {getWeekDays().map((day, i) => {
+                                const dayEvents = getEventsForDay(day);
+                                const isToday = day.toDateString() === new Date().toDateString();
+                                return (
+                                    <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-pink-400" : ""}`}>
+                                        <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-pink-100">
+                                            <p className="text-xs sm:text-sm text-gray-500">{dayNames[i]}</p>
+                                            <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-pink-500" : "text-gray-700"}`}>{day.getDate()}</p>
+                                        </div>
+                                        <div className="space-y-1.5 sm:space-y-2">
+                                            {dayEvents.length === 0 ? (
+                                                <p className="text-xs text-gray-400 text-center py-2 sm:py-4">-</p>
+                                            ) : (
+                                                dayEvents.map((event, idx) => (
+                                                    <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-pink-50 transition-colors`}>
+                                                        <p className="text-[10px] sm:text-xs text-pink-500 mb-0.5">{formatTime(event.start)}</p>
+                                                        <p className="text-xs sm:text-sm font-medium truncate text-gray-700">{event.title}</p>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Month View */}
+                    {viewMode === "month" && (
+                        <div className="space-y-4">
+                            {events.length === 0 ? (
+                                <div className="glass-card p-12 text-center"><p className="text-gray-400">この月の予定はありません</p></div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map((event, index) => (
+                                        <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-5 flex gap-5 text-left hover:bg-pink-50 transition-all">
+                                            <div className="flex flex-col items-center min-w-[60px]">
+                                                <div className="text-sm text-gray-500">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
+                                                <div className="text-xl font-bold text-gray-700">{new Date(event.start).getDate()}</div>
+                                            </div>
+                                            <div className="w-0.5 bg-pink-200 self-stretch mx-2" />
+                                            <div className="flex-1">
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h4 className="text-lg font-semibold text-gray-700">{event.title}</h4>
+                                                    <span className="text-sm font-medium text-pink-600 bg-pink-100 px-3 py-1 rounded-full">{formatTime(event.start)}</span>
+                                                </div>
+                                                {event.location && <p className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.location}</p>}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
-            )}
+            </div>
 
             {/* Event Detail Modal */}
             {selectedEvent && (

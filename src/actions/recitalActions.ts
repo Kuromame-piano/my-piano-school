@@ -12,10 +12,13 @@ export interface Recital {
 }
 
 export interface RecitalParticipant {
-    studentId: number;
+    id?: string;
+    studentId?: number;
     studentName: string;
     piece: string;
     order: number;
+    isGuest?: boolean;
+    studentRecitalRecordId?: number;
 }
 
 const SHEET_NAME = "Recitals";

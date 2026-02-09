@@ -40,9 +40,8 @@ import {
     RecitalRecord,
 } from "../actions/studentActions";
 import { getSheetMusic, SheetMusic } from "../actions/sheetMusicActions";
-import { getTextbooks, getTextbookProgress, saveTextbookProgress, updateTextbookCurrentPage, completeTextbook, deleteTextbookProgress, Textbook, TextbookProgress } from "../actions/textbookActions";
 
-type DetailTab = "active" | "completed" | "notes" | "progress" | "textbooks" | "recital";
+type DetailTab = "active" | "completed" | "notes" | "progress" | "recital";
 
 interface StudentsViewProps {
     initialStudentId?: number | null;
@@ -62,24 +61,18 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             const student = students.find(s => s.id === initialStudentId);
             if (student) {
                 setSelectedStudent(student);
-                // Also load details implies setting active tab to info, but maybe we just want to see the modal?
-                // logic from handleStudentClick:
                 setActiveTab("active");
-                loadTextbookData(student.id);
-                // fetch notes not needed for "info" tab initially unless activeTab is notes
             }
         }
     }, [initialStudentId, students]);
 
     const loadStudents = async () => {
         setLoading(true);
-        const [studentData, textbookData, sheetMusicData] = await Promise.all([
+        const [studentData, sheetMusicData] = await Promise.all([
             getStudents(showArchived),
-            getTextbooks(),
             getSheetMusic()
         ]);
         setStudents(studentData);
-        setTextbooks(textbookData);
         setSheetMusicLibrary(sheetMusicData);
         setLoading(false);
     };
@@ -103,20 +96,12 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     // Progress chart
     const [progressData, setProgressData] = useState<{ month: string; completedCount: number }[]>([]);
 
-    // Textbooks
-    const [textbooks, setTextbooks] = useState<Textbook[]>([]);
-    const [textbookProgress, setTextbookProgress] = useState<(TextbookProgress & { textbookTitle: string; totalPages: number })[]>([]);
-    const [isAddTextbookModalOpen, setIsAddTextbookModalOpen] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-
     // Recital
     const [isAddRecitalModalOpen, setIsAddRecitalModalOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Edit note
     const [editingNote, setEditingNote] = useState<{ id: number; date: string; content: string } | null>(null);
-
-    // Textbook page editing
-    const [editingTextbookPage, setEditingTextbookPage] = useState<{ textbookId: number; currentPage: number } | null>(null);
 
     // Sheet Music Library
     const [sheetMusicLibrary, setSheetMusicLibrary] = useState<SheetMusic[]>([]);
@@ -131,8 +116,6 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             loadLessonNotes(selectedStudent.id);
         } else if (selectedStudent && activeTab === "progress") {
             loadProgressData(selectedStudent.id);
-        } else if (selectedStudent && activeTab === "textbooks") {
-            loadTextbookData(selectedStudent.id);
         }
     }, [selectedStudent, activeTab]);
 
@@ -146,38 +129,6 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     const loadProgressData = async (studentId: number) => {
         const data = await getStudentProgress(studentId);
         setProgressData(data);
-    };
-
-    const loadTextbookData = async (studentId: number) => {
-        const progress = await getTextbookProgress(studentId);
-        setTextbookProgress(progress);
-    };
-
-    const handleSaveTextbookProgress = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!selectedStudent || isSaving) return;
-        setIsSaving(true);
-        try {
-            const form = e.target as HTMLFormElement;
-            const formData = new FormData(form);
-
-            const textbookId = Number(formData.get("textbookId"));
-            const currentPage = Number(formData.get("currentPage"));
-
-            await saveTextbookProgress({
-                studentId: selectedStudent.id,
-                textbookId,
-                status: "in_progress",
-                currentPage,
-                startDate: new Date().toISOString(),
-                lastUpdated: new Date().toISOString(),
-            });
-
-            await loadTextbookData(selectedStudent.id);
-            setIsAddTextbookModalOpen(false);
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     const handleUpdateProgress = async (studentId: number, pieceId: number, progress: number) => {
@@ -199,6 +150,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
         }
 
         if (updatedStudent) await saveStudent(updatedStudent);
+        await loadStudents();
     };
 
     const handleCompletePiece = async (studentId: number, pieceId: number) => {
@@ -222,6 +174,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
         }
 
         if (updatedStudent) await saveStudent(updatedStudent);
+        await loadStudents();
     };
 
     const openAddPieceModal = (studentId: number) => {
@@ -276,6 +229,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             }
 
             if (updatedStudent) await saveStudent(updatedStudent);
+            await loadStudents();
             setIsAddPieceModalOpen(false);
             setAddingPieceForStudentId(null);
             setUseLibrary(false);
@@ -339,42 +293,6 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             );
             await loadLessonNotes(selectedStudent.id);
             setEditingNote(null);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleUpdateTextbookPage = async (textbookId: number, newPage: number) => {
-        if (!selectedStudent || isSaving) return;
-        setIsSaving(true);
-        try {
-            await updateTextbookCurrentPage(selectedStudent.id, textbookId, newPage);
-            await loadTextbookData(selectedStudent.id);
-            setEditingTextbookPage(null);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleCompleteTextbook = async (textbookId: number) => {
-        if (!selectedStudent || isSaving) return;
-        if (!confirm("この教本を修了にしますか？")) return;
-        setIsSaving(true);
-        try {
-            await completeTextbook(selectedStudent.id, textbookId);
-            await loadTextbookData(selectedStudent.id);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleDeleteTextbook = async (textbookId: number) => {
-        if (!selectedStudent || isSaving) return;
-        if (!confirm("この教本を削除しますか？")) return;
-        setIsSaving(true);
-        try {
-            await deleteTextbookProgress(selectedStudent.id, textbookId);
-            await loadTextbookData(selectedStudent.id);
         } finally {
             setIsSaving(false);
         }
@@ -502,7 +420,6 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             <button onClick={() => setActiveTab("completed")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "completed" ? "bg-emerald-100 text-emerald-600" : "text-gray-500 hover:text-emerald-500"}`}><History className="w-3.5 h-3.5 sm:w-4 sm:h-4" />合格履歴</button>
                             <button onClick={() => setActiveTab("notes")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "notes" ? "bg-blue-100 text-blue-600" : "text-gray-500 hover:text-blue-500"}`}><StickyNote className="w-3.5 h-3.5 sm:w-4 sm:h-4" />ノート</button>
                             <button onClick={() => setActiveTab("progress")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "progress" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-pink-500"}`}><TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />上達</button>
-                            <button onClick={() => setActiveTab("textbooks")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "textbooks" ? "bg-amber-100 text-amber-600" : "text-gray-500 hover:text-amber-500"}`}><Book className="w-3.5 h-3.5 sm:w-4 sm:h-4" />教本</button>
                             <button onClick={() => setActiveTab("recital")} className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap shrink-0 ${activeTab === "recital" ? "bg-rose-100 text-rose-600" : "text-gray-500 hover:text-rose-500"}`}><Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />発表会</button>
                         </div>
 
@@ -584,17 +501,17 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                                 note.content.toLowerCase().includes(noteSearchQuery.toLowerCase())
                                             )
                                             .map((note) => (
-                                            <div key={note.id} className="glass-card p-5 group">
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <p className="text-sm text-blue-500 font-medium">{note.date}</p>
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => setEditingNote({ id: note.id, date: note.date, content: note.content })} className="p-1.5 hover:bg-blue-100 rounded-lg"><Pencil className="w-4 h-4 text-blue-600" /></button>
-                                                        <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
+                                                <div key={note.id} className="glass-card p-5 group">
+                                                    <div className="flex items-start justify-between mb-2">
+                                                        <p className="text-sm text-blue-500 font-medium">{note.date}</p>
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => setEditingNote({ id: note.id, date: note.date, content: note.content })} className="p-1.5 hover:bg-blue-100 rounded-lg"><Pencil className="w-4 h-4 text-blue-600" /></button>
+                                                            <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
+                                                        </div>
                                                     </div>
+                                                    <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
                                                 </div>
-                                                <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
-                                            </div>
-                                        ))
+                                            ))
                                     )}
                                 </>
                             )}
@@ -620,70 +537,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 </div>
                             )}
 
-                            {activeTab === "textbooks" && (
-                                <>
-                                    <button onClick={() => setIsAddTextbookModalOpen(true)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-amber-500/50 rounded-xl text-slate-500 hover:text-amber-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />教本を追加</button>
-                                    {textbookProgress.length === 0 ? (
-                                        <p className="text-center py-8 text-slate-600">教本はまだ登録されていません</p>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            {textbookProgress.map((prog) => (
-                                                <div key={prog.textbookId} className="glass-card p-5">
-                                                    <div className="flex justify-between items-start mb-4">
-                                                        <div>
-                                                            <h4 className="font-semibold text-lg flex items-center gap-2">
-                                                                <Book className="w-5 h-5 text-amber-400" />
-                                                                {prog.textbookTitle}
-                                                            </h4>
-                                                            <p className="text-sm text-slate-500">開始: {prog.startDate ? new Date(prog.startDate).toLocaleDateString("ja-JP") : "-"}</p>
-                                                        </div>
-                                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${prog.status === "completed" ? "bg-emerald-500/10 text-emerald-400" : "bg-blue-500/10 text-blue-400"}`}>
-                                                            {prog.status === "completed" ? "修了" : "進行中"}
-                                                        </span>
-                                                    </div>
-                                                    <div className="space-y-3">
-                                                        <div className="flex justify-between items-center text-sm">
-                                                            <span className="text-gray-600">進捗状況</span>
-                                                            {editingTextbookPage?.textbookId === prog.textbookId ? (
-                                                                <div className="flex items-center gap-2">
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        max={prog.totalPages}
-                                                                        value={editingTextbookPage.currentPage}
-                                                                        onChange={(e) => setEditingTextbookPage({ ...editingTextbookPage, currentPage: Math.min(prog.totalPages, Math.max(0, parseInt(e.target.value) || 0)) })}
-                                                                        className="w-16 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-center text-sm"
-                                                                    />
-                                                                    <span className="text-gray-600">/ {prog.totalPages}</span>
-                                                                    <button onClick={() => handleUpdateTextbookPage(prog.textbookId, editingTextbookPage.currentPage)} className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-medium hover:bg-amber-500/30">保存</button>
-                                                                    <button onClick={() => setEditingTextbookPage(null)} className="px-2 py-1 bg-slate-700 text-gray-600 rounded text-xs hover:bg-slate-600">取消</button>
-                                                                </div>
-                                                            ) : (
-                                                                <button onClick={() => setEditingTextbookPage({ textbookId: prog.textbookId, currentPage: prog.currentPage })} className="text-slate-200 hover:text-amber-400">
-                                                                    {prog.currentPage} / {prog.totalPages} ページ
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <div className="w-full bg-slate-800 rounded-full h-2">
-                                                            <div className="bg-amber-500 h-2 rounded-full transition-all duration-500" style={{ width: `${(prog.currentPage / prog.totalPages) * 100}%` }} />
-                                                        </div>
-                                                        {prog.status !== "completed" && (
-                                                            <div className="flex gap-2 pt-2">
-                                                                <button onClick={() => handleCompleteTextbook(prog.textbookId)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-sm font-medium transition-colors">
-                                                                    <Check className="w-4 h-4" />修了
-                                                                </button>
-                                                                <button onClick={() => handleDeleteTextbook(prog.textbookId)} className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm font-medium transition-colors">
-                                                                    <Trash2 className="w-4 h-4" />削除
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
+
 
                             {activeTab === "recital" && (
                                 <>
@@ -698,13 +552,13 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                                         <div>
                                                             <h4 className="font-semibold text-lg flex items-center gap-2">
                                                                 <Trophy className="w-5 h-5 text-rose-400" />
-                                                                {record.eventName}
+                                                                {record.eventName || "(未設定)"}
                                                             </h4>
                                                             <p className="text-sm text-slate-500">{record.date}</p>
                                                         </div>
                                                     </div>
                                                     <div className="space-y-2 text-sm">
-                                                        <p className="text-slate-300"><span className="text-slate-500">演奏曲:</span> {record.piece}</p>
+                                                        <p className="text-slate-300"><span className="text-slate-500">演奏曲:</span> {record.piece || "(未設定)"}</p>
                                                         {record.venue && <p className="text-gray-600"><span className="text-slate-500">会場:</span> {record.venue}</p>}
                                                         {record.memo && <p className="text-gray-600 italic">{record.memo}</p>}
                                                     </div>
@@ -926,30 +780,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                 </div>
             )}
 
-            {/* Add Textbook Modal */}
-            {isAddTextbookModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddTextbookModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                        <button onClick={() => setIsAddTextbookModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
-                        <h3 className="text-2xl font-bold text-gradient mb-6">教本を追加</h3>
-                        <form onSubmit={handleSaveTextbookProgress} className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">教本を選択</label>
-                                <select name="textbookId" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
-                                    <option value="">選択してください</option>
-                                    {textbooks.map((t) => <option key={t.id} value={t.id}>{t.title} ({t.level})</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">現在のページ</label>
-                                <input name="currentPage" type="number" min="0" defaultValue="0" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
-                            </div>
-                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
-                        </form>
-                    </div>
-                </div>
-            )}
+
 
             {/* Add Recital Modal */}
             {isAddRecitalModalOpen && selectedStudent && (
@@ -986,16 +817,16 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             }
                         }} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">発表会名 <span className="text-red-500">*</span></label>
-                                <input name="eventName" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 第10回 ピアノ発表会" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">発表会名</label>
+                                <input name="eventName" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 第10回 ピアノ発表会" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-2">開催日 <span className="text-red-500">*</span></label>
                                 <input name="date" type="date" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">演奏曲 <span className="text-red-500">*</span></label>
-                                <input name="piece" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">演奏曲</label>
+                                <input name="piece" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-2">会場</label>

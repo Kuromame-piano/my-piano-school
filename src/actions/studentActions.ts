@@ -46,10 +46,11 @@ export interface Student {
 export interface RecitalRecord {
     id: number;
     date: string;
-    eventName: string;
-    piece: string;
+    eventName?: string;
+    piece?: string;
     venue?: string;
     memo?: string;
+    recitalId?: number;
 }
 
 const SHEET_NAME = "Students";

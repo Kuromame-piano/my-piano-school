@@ -6,11 +6,14 @@ import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { getRecitals, saveRecital, deleteRecital, Recital, RecitalParticipant } from "../actions/recitalActions";
-import { getStudents, Student } from "../actions/studentActions";
+import { getStudents, saveStudent, Student, RecitalRecord } from "../actions/studentActions";
 
 // Sortable Participant Component
-function SortableParticipant({ participant, index, onRemove }: { participant: RecitalParticipant; index: number; onRemove: (id: number) => void }) {
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: participant.studentId });
+function SortableParticipant({ participant, index, onRemove }: { participant: RecitalParticipant; index: number; onRemove: (id: string | number) => void }) {
+    const uniqueId = participant.id || participant.studentId;
+    if (!uniqueId) return null;
+
+    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: uniqueId });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -26,12 +29,15 @@ function SortableParticipant({ participant, index, onRemove }: { participant: Re
                 {index + 1}
             </div>
             <div className="flex-1">
-                <p className="font-medium">{participant.studentName}</p>
+                <div className="flex items-center gap-2">
+                    <p className="font-medium">{participant.studentName}</p>
+                    {participant.isGuest && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">ゲスト</span>}
+                </div>
                 <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
                     <Music className="w-3.5 h-3.5" />{participant.piece}
                 </p>
             </div>
-            <button onClick={() => onRemove(participant.studentId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
+            <button onClick={() => onRemove(uniqueId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
                 <Trash2 className="w-4 h-4 text-rose-400" />
             </button>
         </div>
@@ -47,6 +53,7 @@ export default function RecitalView() {
     const [editingRecital, setEditingRecital] = useState<Recital | null>(null);
     const [isAddParticipantModalOpen, setIsAddParticipantModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [useCustomName, setUseCustomName] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -104,16 +111,55 @@ export default function RecitalView() {
         try {
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
-            const studentId = parseInt(formData.get("studentId") as string);
-            const student = students.find((s) => s.id === studentId);
-            if (!student) return;
+            const piece = formData.get("piece") as string;
 
-            const newParticipant: RecitalParticipant = {
-                studentId,
-                studentName: student.name,
-                piece: formData.get("piece") as string,
-                order: selectedRecital.participants.length + 1,
-            };
+            let newParticipant: RecitalParticipant;
+            const participantId = Date.now().toString();
+
+            if (useCustomName) {
+                // Guest Participant
+                const customName = formData.get("customName") as string;
+                newParticipant = {
+                    id: participantId,
+                    studentName: customName,
+                    piece: piece,
+                    order: selectedRecital.participants.length + 1,
+                    isGuest: true,
+                };
+            } else {
+                // Registered Student
+                const studentIdStr = formData.get("studentId") as string;
+                const studentId = parseInt(studentIdStr);
+                const student = students.find((s) => s.id === studentId);
+
+                if (!student) return;
+
+                // Create Recital Record for Student History (Phase 4)
+                const newRecitalRecord: RecitalRecord = {
+                    id: Date.now(),
+                    date: selectedRecital.date,
+                    eventName: selectedRecital.name,
+                    piece: piece,
+                    venue: selectedRecital.location, // Can be undefined, which matches interface
+                    recitalId: selectedRecital.id
+                };
+
+                const updatedStudent = {
+                    ...student,
+                    recitalHistory: [...(student.recitalHistory || []), newRecitalRecord]
+                };
+
+                await saveStudent(updatedStudent);
+
+                newParticipant = {
+                    id: participantId,
+                    studentId,
+                    studentName: student.name,
+                    piece: piece,
+                    order: selectedRecital.participants.length + 1,
+                    studentRecitalRecordId: newRecitalRecord.id,
+                };
+            }
 
             const updatedRecital = {
                 ...selectedRecital,
@@ -124,17 +170,18 @@ export default function RecitalView() {
             setSelectedRecital(updatedRecital);
             await loadData();
             setIsAddParticipantModalOpen(false);
+            setUseCustomName(false);
         } finally {
             setIsSaving(false);
         }
     };
 
-    const handleRemoveParticipant = async (studentId: number) => {
+    const handleRemoveParticipant = async (id: string | number) => {
         if (!selectedRecital) return;
         if (!confirm("この参加者を削除しますか？")) return;
 
         const updatedParticipants = selectedRecital.participants
-            .filter((p) => p.studentId !== studentId)
+            .filter((p) => (p.id || p.studentId) !== id)
             .map((p, i) => ({ ...p, order: i + 1 }));
 
         const updatedRecital = { ...selectedRecital, participants: updatedParticipants };
@@ -148,8 +195,8 @@ export default function RecitalView() {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            const oldIndex = selectedRecital.participants.findIndex((p) => p.studentId === active.id);
-            const newIndex = selectedRecital.participants.findIndex((p) => p.studentId === over.id);
+            const oldIndex = selectedRecital.participants.findIndex((p) => (p.id || p.studentId) === active.id);
+            const newIndex = selectedRecital.participants.findIndex((p) => (p.id || p.studentId) === over.id);
 
             const newParticipants = [...selectedRecital.participants];
             const [moved] = newParticipants.splice(oldIndex, 1);
@@ -266,10 +313,10 @@ export default function RecitalView() {
                             ) : (
                                 <div className="space-y-3">
                                     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                                        <SortableContext items={selectedRecital.participants.map(p => p.studentId)} strategy={verticalListSortingStrategy}>
+                                        <SortableContext items={selectedRecital.participants.map(p => p.id || p.studentId!)} strategy={verticalListSortingStrategy}>
                                             {selectedRecital.participants.map((participant, index) => (
                                                 <SortableParticipant
-                                                    key={participant.studentId}
+                                                    key={participant.id || participant.studentId}
                                                     participant={participant}
                                                     index={index}
                                                     onRemove={handleRemoveParticipant}
@@ -321,21 +368,49 @@ export default function RecitalView() {
                     <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
                         <button onClick={() => setIsAddParticipantModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">参加者を追加</h3>
+
                         <form onSubmit={handleAddParticipant} className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">生徒を選択 <span className="text-red-400">*</span></label>
-                                <select name="studentId" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
-                                    <option value="">選択してください</option>
-                                    {students
-                                        .filter((s) => !selectedRecital.participants.find((p) => p.studentId === s.id))
-                                        .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
-                                    }
-                                </select>
+                            {/* Toggle buttons */}
+                            <div className="flex gap-2 mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setUseCustomName(false)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${!useCustomName ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "bg-slate-800 text-slate-500 hover:bg-slate-700"}`}
+                                >
+                                    登録生徒から選択
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setUseCustomName(true)}
+                                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${useCustomName ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "bg-slate-800 text-slate-500 hover:bg-slate-700"}`}
+                                >
+                                    ゲスト参加者
+                                </button>
                             </div>
+
+                            {useCustomName ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2">参加者名 <span className="text-red-400">*</span></label>
+                                    <input name="customName" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 山田太郎（ゲスト）" />
+                                </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2">生徒を選択 <span className="text-red-400">*</span></label>
+                                    <select name="studentId" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                                        <option value="">選択してください</option>
+                                        {students
+                                            .filter((s) => !selectedRecital.participants.find((p) => p.studentId === s.id))
+                                            .map((s) => <option key={s.id} value={s.id}>{s.name}</option>)
+                                        }
+                                    </select>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium text-slate-400 mb-2">演奏曲 <span className="text-red-400">*</span></label>
                                 <input name="piece" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
                             </div>
+
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
                     </div>
