@@ -39,6 +39,7 @@ import {
     Student,
     RecitalRecord,
 } from "../actions/studentActions";
+import { getSheetMusic, SheetMusic } from "../actions/sheetMusicActions";
 import { getTextbooks, getTextbookProgress, saveTextbookProgress, updateTextbookCurrentPage, completeTextbook, deleteTextbookProgress, Textbook, TextbookProgress } from "../actions/textbookActions";
 
 type DetailTab = "active" | "completed" | "notes" | "progress" | "textbooks" | "recital";
@@ -72,12 +73,14 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     const loadStudents = async () => {
         setLoading(true);
-        const [studentData, textbookData] = await Promise.all([
+        const [studentData, textbookData, sheetMusicData] = await Promise.all([
             getStudents(showArchived),
-            getTextbooks()
+            getTextbooks(),
+            getSheetMusic()
         ]);
         setStudents(studentData);
         setTextbooks(textbookData);
+        setSheetMusicLibrary(sheetMusicData);
         setLoading(false);
     };
 
@@ -91,6 +94,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     const [lessonNotes, setLessonNotes] = useState<{ id: number; date: string; content: string; pieces?: string[] }[]>([]);
     const [loadingNotes, setLoadingNotes] = useState(false);
     const [isAddNoteModalOpen, setIsAddNoteModalOpen] = useState(false);
+    const [noteSearchQuery, setNoteSearchQuery] = useState("");
 
     // Add piece modal
     const [isAddPieceModalOpen, setIsAddPieceModalOpen] = useState(false);
@@ -113,6 +117,10 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
     // Textbook page editing
     const [editingTextbookPage, setEditingTextbookPage] = useState<{ textbookId: number; currentPage: number } | null>(null);
+
+    // Sheet Music Library
+    const [sheetMusicLibrary, setSheetMusicLibrary] = useState<SheetMusic[]>([]);
+    const [useLibrary, setUseLibrary] = useState(false);
 
     const filteredStudents = students.filter((s) =>
         s.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -229,8 +237,18 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
         try {
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
-            const title = formData.get("title") as string;
+            let title = formData.get("title") as string;
             const coverImage = formData.get("coverImage") as string;
+            const sheetMusicIdStr = formData.get("sheetMusicId") as string;
+
+            let sheetMusicId: number | undefined;
+            if (useLibrary && sheetMusicIdStr) {
+                sheetMusicId = parseInt(sheetMusicIdStr);
+                const selectedMusic = sheetMusicLibrary.find(m => m.id === sheetMusicId);
+                if (selectedMusic) {
+                    title = selectedMusic.title;
+                }
+            }
 
             const newPiece = {
                 id: Date.now(),
@@ -239,6 +257,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                 status: "active" as const,
                 startedAt: new Date().toLocaleDateString("ja-JP"),
                 coverImage: coverImage || undefined,
+                sheetMusicId,
             };
             let updatedStudent: Student | undefined;
 
@@ -259,6 +278,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             if (updatedStudent) await saveStudent(updatedStudent);
             setIsAddPieceModalOpen(false);
             setAddingPieceForStudentId(null);
+            setUseLibrary(false);
         } finally {
             setIsSaving(false);
         }
@@ -465,7 +485,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             <div className="flex gap-2 mt-4">
                                 <button
                                     onClick={() => handleArchiveStudent(selectedStudent.id, !selectedStudent.archived)}
-                                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedStudent.archived ? "bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30" : "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"}`}
+                                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors ${selectedStudent.archived ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"}`}
                                 >
                                     {selectedStudent.archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                                     <span className="hidden sm:inline">{selectedStudent.archived ? "復元" : "アーカイブ"}</span>
@@ -537,22 +557,42 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
 
                             {activeTab === "notes" && (
                                 <>
-                                    <button onClick={() => setIsAddNoteModalOpen(true)} className="w-full py-4 border-2 border-dashed border-slate-700 hover:border-blue-500/50 rounded-xl text-slate-500 hover:text-blue-400 font-medium flex items-center justify-center gap-2"><Plus className="w-5 h-5" />レッスンノートを追加</button>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="日付や内容で検索..."
+                                                value={noteSearchQuery}
+                                                onChange={(e) => setNoteSearchQuery(e.target.value)}
+                                                className="w-full pl-10 pr-4 py-2.5 bg-white border border-pink-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400"
+                                            />
+                                        </div>
+                                        <button onClick={() => setIsAddNoteModalOpen(true)} className="px-4 py-2.5 premium-gradient rounded-xl text-white font-medium flex items-center gap-2 whitespace-nowrap"><Plus className="w-4 h-4" />追加</button>
+                                    </div>
                                     {loadingNotes ? (
-                                        <p className="text-center py-8 text-slate-500">読み込み中...</p>
-                                    ) : lessonNotes.length === 0 ? (
-                                        <p className="text-center py-8 text-slate-600">レッスンノートはまだありません</p>
+                                        <p className="text-center py-8 text-gray-400">読み込み中...</p>
+                                    ) : lessonNotes.filter(note =>
+                                        note.date.includes(noteSearchQuery) ||
+                                        note.content.toLowerCase().includes(noteSearchQuery.toLowerCase())
+                                    ).length === 0 ? (
+                                        <p className="text-center py-8 text-gray-400">{noteSearchQuery ? "検索結果がありません" : "レッスンノートはまだありません"}</p>
                                     ) : (
-                                        lessonNotes.map((note) => (
+                                        lessonNotes
+                                            .filter(note =>
+                                                note.date.includes(noteSearchQuery) ||
+                                                note.content.toLowerCase().includes(noteSearchQuery.toLowerCase())
+                                            )
+                                            .map((note) => (
                                             <div key={note.id} className="glass-card p-5 group">
                                                 <div className="flex items-start justify-between mb-2">
-                                                    <p className="text-sm text-blue-400 font-medium">{note.date}</p>
+                                                    <p className="text-sm text-blue-500 font-medium">{note.date}</p>
                                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button onClick={() => setEditingNote({ id: note.id, date: note.date, content: note.content })} className="p-1.5 hover:bg-blue-500/20 rounded-lg"><Pencil className="w-4 h-4 text-blue-400" /></button>
-                                                        <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-rose-500/20 rounded-lg"><Trash2 className="w-4 h-4 text-rose-400" /></button>
+                                                        <button onClick={() => setEditingNote({ id: note.id, date: note.date, content: note.content })} className="p-1.5 hover:bg-blue-100 rounded-lg"><Pencil className="w-4 h-4 text-blue-600" /></button>
+                                                        <button onClick={() => handleDeleteNote(note.id)} className="p-1.5 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                                                     </div>
                                                 </div>
-                                                <p className="text-slate-300 whitespace-pre-wrap">{note.content}</p>
+                                                <p className="text-gray-700 whitespace-pre-wrap">{note.content}</p>
                                             </div>
                                         ))
                                     )}
@@ -603,7 +643,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                                     </div>
                                                     <div className="space-y-3">
                                                         <div className="flex justify-between items-center text-sm">
-                                                            <span className="text-slate-400">進捗状況</span>
+                                                            <span className="text-gray-600">進捗状況</span>
                                                             {editingTextbookPage?.textbookId === prog.textbookId ? (
                                                                 <div className="flex items-center gap-2">
                                                                     <input
@@ -614,9 +654,9 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                                                         onChange={(e) => setEditingTextbookPage({ ...editingTextbookPage, currentPage: Math.min(prog.totalPages, Math.max(0, parseInt(e.target.value) || 0)) })}
                                                                         className="w-16 px-2 py-1 bg-slate-800 border border-slate-600 rounded text-center text-sm"
                                                                     />
-                                                                    <span className="text-slate-400">/ {prog.totalPages}</span>
+                                                                    <span className="text-gray-600">/ {prog.totalPages}</span>
                                                                     <button onClick={() => handleUpdateTextbookPage(prog.textbookId, editingTextbookPage.currentPage)} className="px-2 py-1 bg-amber-500/20 text-amber-400 rounded text-xs font-medium hover:bg-amber-500/30">保存</button>
-                                                                    <button onClick={() => setEditingTextbookPage(null)} className="px-2 py-1 bg-slate-700 text-slate-400 rounded text-xs hover:bg-slate-600">取消</button>
+                                                                    <button onClick={() => setEditingTextbookPage(null)} className="px-2 py-1 bg-slate-700 text-gray-600 rounded text-xs hover:bg-slate-600">取消</button>
                                                                 </div>
                                                             ) : (
                                                                 <button onClick={() => setEditingTextbookPage({ textbookId: prog.textbookId, currentPage: prog.currentPage })} className="text-slate-200 hover:text-amber-400">
@@ -665,8 +705,8 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                                     </div>
                                                     <div className="space-y-2 text-sm">
                                                         <p className="text-slate-300"><span className="text-slate-500">演奏曲:</span> {record.piece}</p>
-                                                        {record.venue && <p className="text-slate-400"><span className="text-slate-500">会場:</span> {record.venue}</p>}
-                                                        {record.memo && <p className="text-slate-400 italic">{record.memo}</p>}
+                                                        {record.venue && <p className="text-gray-600"><span className="text-slate-500">会場:</span> {record.venue}</p>}
+                                                        {record.memo && <p className="text-gray-600 italic">{record.memo}</p>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -682,9 +722,9 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             {/* Add/Edit Student Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl p-8 max-h-[90vh] overflow-y-auto">
-                        <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="relative z-10 w-full max-w-2xl bg-white border border-pink-200 rounded-3xl p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingStudent ? "生徒情報を編集" : "新規生徒の登録"}</h3>
                         <form onSubmit={async (e) => {
                             e.preventDefault();
@@ -725,25 +765,25 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                         }} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <div className="space-y-4">
-                                    <h4 className="font-semibold text-slate-300 border-b border-slate-700 pb-2 mb-4">基本情報</h4>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">お名前 <span className="text-red-400">*</span></label><input name="name" defaultValue={editingStudent?.name} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 花子" /></div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">電話番号</label><input name="phone" defaultValue={editingStudent?.phone} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-1234-5678" /></div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">メールアドレス</label><input name="email" type="email" defaultValue={editingStudent?.email} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: example@email.com" /></div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">住所</label><input name="address" defaultValue={editingStudent?.address} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 江東区清澄白河..." /></div>
+                                    <h4 className="font-semibold text-gray-700 border-b border-pink-200 pb-2 mb-4">基本情報</h4>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">お名前 <span className="text-red-500">*</span></label><input name="name" defaultValue={editingStudent?.name} required className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 山田 花子" /></div>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">電話番号</label><input name="phone" defaultValue={editingStudent?.phone} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 090-1234-5678" /></div>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">メールアドレス</label><input name="email" type="email" defaultValue={editingStudent?.email} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: example@email.com" /></div>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">住所</label><input name="address" defaultValue={editingStudent?.address} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 江東区清澄白河..." /></div>
                                 </div>
                                 <div className="space-y-4">
-                                    <h4 className="font-semibold text-slate-300 border-b border-slate-700 pb-2 mb-4">詳細情報</h4>
+                                    <h4 className="font-semibold text-gray-700 border-b border-pink-200 pb-2 mb-4">詳細情報</h4>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">レッスン日時</label>
-                                        <input name="lessonDay" defaultValue={editingStudent?.lessonDay} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 毎週火曜 14:00" />
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">レッスン日時</label>
+                                        <input name="lessonDay" defaultValue={editingStudent?.lessonDay} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 毎週火曜 14:00" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">生年月日</label>
-                                        <input name="birthDate" type="date" defaultValue={editingStudent?.birthDate} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" />
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">生年月日</label>
+                                        <input name="birthDate" type="date" defaultValue={editingStudent?.birthDate} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">学年</label>
-                                        <select name="gradeLevel" defaultValue={editingStudent?.gradeLevel || ""} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50">
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">学年</label>
+                                        <select name="gradeLevel" defaultValue={editingStudent?.gradeLevel || ""} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400">
                                             <option value="">選択してください</option>
                                             <optgroup label="未就学">
                                                 <option value="年少">年少</option>
@@ -775,20 +815,20 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">ステータス</label>
-                                        <select name="status" defaultValue={editingStudent?.status || "継続中"} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50">
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">ステータス</label>
+                                        <select name="status" defaultValue={editingStudent?.status || "継続中"} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400">
                                             <option value="継続中">継続中</option>
                                             <option value="休会中">休会中</option>
                                             <option value="退会">退会</option>
                                         </select>
                                     </div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者氏名</label><input name="parentName" defaultValue={editingStudent?.parentName} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 山田 太郎" /></div>
-                                    <div><label className="block text-sm font-medium text-slate-400 mb-2">保護者電話番号</label><input name="parentPhone" defaultValue={editingStudent?.parentPhone} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 090-0000-0000" /></div>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">保護者氏名</label><input name="parentName" defaultValue={editingStudent?.parentName} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 山田 太郎" /></div>
+                                    <div><label className="block text-sm font-medium text-gray-600 mb-2">保護者電話番号</label><input name="parentPhone" defaultValue={editingStudent?.parentPhone} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 090-0000-0000" /></div>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">メモ (特記事項など)</label>
-                                <textarea name="memo" defaultValue={editingStudent?.memo} rows={3} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 focus:border-violet-500/50" placeholder="例: 発表会への参加希望、苦手な音階など" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">メモ (特記事項など)</label>
+                                <textarea name="memo" defaultValue={editingStudent?.memo} rows={3} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 focus:border-pink-400" placeholder="例: 発表会への参加希望、苦手な音階など" />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg hover:shadow-xl mt-6 ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingStudent ? "更新する" : "登録する")}</button>
                         </form>
@@ -805,11 +845,11 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                         <h3 className="text-2xl font-bold text-gradient mb-6">レッスンノートを追加</h3>
                         <form onSubmit={handleAddLessonNote} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">日付</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">日付</label>
                                 <input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">レッスン内容・メモ</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">レッスン内容・メモ</label>
                                 <textarea name="content" rows={5} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="今日のレッスン内容、注意点、次回への課題など..." />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "保存する"}</button>
@@ -827,11 +867,11 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                         <h3 className="text-2xl font-bold text-gradient mb-6">レッスンノートを編集</h3>
                         <form onSubmit={handleUpdateNote} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">日付</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">日付</label>
                                 <input name="date" type="date" defaultValue={editingNote.date} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">レッスン内容・メモ</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">レッスン内容・メモ</label>
                                 <textarea name="content" rows={5} defaultValue={editingNote.content} required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="今日のレッスン内容、注意点、次回への課題など..." />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "更新する"}</button>
@@ -843,19 +883,43 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             {/* Add Piece Modal */}
             {isAddPieceModalOpen && (
                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); }} />
-                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                        <button onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); }} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); setUseLibrary(false); }} />
+                    <div className="relative z-10 w-full max-w-md bg-white border border-pink-200 rounded-3xl p-8">
+                        <button onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); setUseLibrary(false); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">新しい曲を追加</h3>
+
+                        {/* Toggle between library and manual input */}
+                        <div className="flex gap-2 mb-5">
+                            <button type="button" onClick={() => setUseLibrary(false)} className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!useLibrary ? "bg-pink-100 text-pink-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>手動入力</button>
+                            <button type="button" onClick={() => setUseLibrary(true)} className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${useLibrary ? "bg-pink-100 text-pink-700" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>ライブラリから選択</button>
+                        </div>
+
                         <form onSubmit={handleAddPieceSubmit} className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">曲名 <span className="text-red-400">*</span></label>
-                                <input name="title" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">カバー画像URL（任意）</label>
-                                <input name="coverImage" type="url" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="https://..." />
-                            </div>
+                            {useLibrary ? (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-600 mb-2">楽譜を選択 <span className="text-red-500">*</span></label>
+                                    <select name="sheetMusicId" required className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                        <option value="">選択してください</option>
+                                        {sheetMusicLibrary.map((music) => (
+                                            <option key={music.id} value={music.id}>
+                                                {music.title} {music.composer ? `- ${music.composer}` : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <input type="hidden" name="title" value="__FROM_LIBRARY__" />
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">曲名 <span className="text-red-500">*</span></label>
+                                        <input name="title" required className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: エリーゼのために" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-600 mb-2">カバー画像URL（任意）</label>
+                                        <input name="coverImage" type="url" className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="https://..." />
+                                    </div>
+                                </>
+                            )}
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
                         </form>
                     </div>
@@ -871,14 +935,14 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                         <h3 className="text-2xl font-bold text-gradient mb-6">教本を追加</h3>
                         <form onSubmit={handleSaveTextbookProgress} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">教本を選択</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">教本を選択</label>
                                 <select name="textbookId" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
                                     <option value="">選択してください</option>
                                     {textbooks.map((t) => <option key={t.id} value={t.id}>{t.title} ({t.level})</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">現在のページ</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">現在のページ</label>
                                 <input name="currentPage" type="number" min="0" defaultValue="0" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>
@@ -922,23 +986,23 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                             }
                         }} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">発表会名 <span className="text-red-400">*</span></label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">発表会名 <span className="text-red-500">*</span></label>
                                 <input name="eventName" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 第10回 ピアノ発表会" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">開催日 <span className="text-red-400">*</span></label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">開催日 <span className="text-red-500">*</span></label>
                                 <input name="date" type="date" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">演奏曲 <span className="text-red-400">*</span></label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">演奏曲 <span className="text-red-500">*</span></label>
                                 <input name="piece" required className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: エリーゼのために" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">会場</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">会場</label>
                                 <input name="venue" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 東京文化会館" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">備考</label>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">備考</label>
                                 <textarea name="memo" rows={2} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 初めての発表会、上手に演奏できた" />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : "追加する"}</button>

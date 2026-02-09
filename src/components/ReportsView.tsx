@@ -291,25 +291,25 @@ export default function ReportsView() {
         <div className="space-y-6">
             <header>
                 <h2 className="text-3xl font-bold text-gradient mb-2">レッスン報告</h2>
-                <p className="text-slate-400">メッセージ生成・履歴・通知・請求書</p>
+                <p className="text-gray-500">メッセージ生成・履歴・通知・請求書</p>
             </header>
 
             {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit flex-wrap">
-                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+            <div className="flex gap-2 p-1 bg-white/80 rounded-xl w-fit flex-wrap border border-pink-200">
+                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                     <Sparkles className="w-4 h-4" />報告作成
                 </button>
-                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                     <History className="w-4 h-4" />送信履歴
                 </button>
-                <button onClick={() => setActiveTab("notifications")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "notifications" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <button onClick={() => setActiveTab("notifications")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "notifications" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                     <Bell className="w-4 h-4" />通知
                     {(unpaidStudents.length > 0 || birthdays.length > 0) && <span className="w-2 h-2 bg-rose-500 rounded-full" />}
                 </button>
-                <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "invoice" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "invoice" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                     <FileDown className="w-4 h-4" />請求書
                 </button>
-                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "annual" ? "bg-purple-500/20 text-purple-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "annual" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                     <FileDown className="w-4 h-4" />年間レポート
                 </button>
             </div>
@@ -319,18 +319,18 @@ export default function ReportsView() {
                     <div className="space-y-6">
                         {/* Student selector */}
                         <div className="glass-card p-6">
-                            <label className="block text-sm font-medium text-slate-400 mb-3">生徒を選択</label>
+                            <label className="block text-sm font-medium text-gray-600 mb-3">生徒を選択</label>
                             {students.length === 0 ? (
-                                <p className="text-slate-500 text-sm">生徒データがありません</p>
+                                <p className="text-gray-400 text-sm">生徒データがありません</p>
                             ) : (
                                 <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2">
                                     {students.map((student) => {
                                         const activePiece = student.pieces.find((p) => p.status === "active");
                                         return (
-                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-violet-500/20 border border-violet-500/30" : "bg-slate-800/50 border border-slate-700 hover:bg-slate-800"}`}>
-                                                <p className="font-medium">{student.name}</p>
+                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-pink-100 border border-pink-300" : "bg-white border border-pink-200 hover:bg-pink-50"}`}>
+                                                <p className="font-medium text-gray-700">{student.name}</p>
                                                 {activePiece && (
-                                                    <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
+                                                    <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
                                                 )}
                                             </button>
                                         );
@@ -342,28 +342,32 @@ export default function ReportsView() {
                         {/* Template selector */}
                         <div className="glass-card p-6">
                             <div className="flex items-center justify-between mb-3">
-                                <label className="text-sm font-medium text-slate-400">テンプレートを選択</label>
-                                <button onClick={() => { setEditingTemplate(null); setIsTemplateModalOpen(true); }} className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+                                <label className="text-sm font-medium text-gray-600">テンプレートを選択</label>
+                                <button onClick={() => { setEditingTemplate(null); setIsTemplateModalOpen(true); }} className="text-xs text-pink-500 hover:text-pink-600 flex items-center gap-1">
                                     <Plus className="w-3 h-3" />新規作成
                                 </button>
                             </div>
                             <div className="space-y-2">
                                 {templates.map((template) => (
-                                    <div key={template.id} className={`p-4 rounded-xl text-left flex items-center gap-2 ${selectedTemplate?.id === template.id ? "bg-violet-500/20 border border-violet-500/30" : "bg-slate-800/50 border border-slate-700 hover:bg-slate-800"}`}>
-                                        <button onClick={() => setSelectedTemplate(template)} className="flex-1 text-left">
-                                            <p className="font-medium flex items-center gap-2">
-                                                <Sparkles className="w-4 h-4 text-violet-400" />
+                                    <button
+                                        key={template.id}
+                                        onClick={() => setSelectedTemplate(template)}
+                                        className={`w-full p-4 rounded-xl text-left flex items-center gap-2 transition-colors ${selectedTemplate?.id === template.id ? "bg-pink-100 border border-pink-300" : "bg-white border border-pink-200 hover:bg-pink-50"}`}
+                                    >
+                                        <div className="flex-1">
+                                            <p className="font-medium flex items-center gap-2 text-gray-700">
+                                                <Sparkles className="w-4 h-4 text-pink-500" />
                                                 {template.label}
-                                                {template.isCustom && <span className="text-xs px-2 py-0.5 bg-slate-700 rounded-full">カスタム</span>}
+                                                {template.isCustom && <span className="text-xs px-2 py-0.5 bg-pink-100 text-pink-600 rounded-full">カスタム</span>}
                                             </p>
-                                        </button>
+                                        </div>
                                         {template.isCustom && (
-                                            <div className="flex gap-1">
-                                                <button onClick={() => { setEditingTemplate(template); setIsTemplateModalOpen(true); }} className="p-1.5 hover:bg-slate-700 rounded-lg"><Pencil className="w-3.5 h-3.5 text-slate-400" /></button>
-                                                <button onClick={() => handleDeleteTemplate(template.id)} className="p-1.5 hover:bg-rose-500/20 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-rose-400" /></button>
+                                            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                                                <button onClick={() => { setEditingTemplate(template); setIsTemplateModalOpen(true); }} className="p-1.5 hover:bg-gray-100 rounded-lg"><Pencil className="w-3.5 h-3.5 text-gray-600" /></button>
+                                                <button onClick={() => handleDeleteTemplate(template.id)} className="p-1.5 hover:bg-rose-100 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-rose-600" /></button>
                                             </div>
                                         )}
-                                    </div>
+                                    </button>
                                 ))}
                             </div>
                         </div>
@@ -371,12 +375,12 @@ export default function ReportsView() {
                         {/* Custom inputs */}
                         <div className="glass-card p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">今日良かった点</label>
-                                <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 placeholder:text-slate-600" placeholder="例: テンポが安定していた" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">今日良かった点</label>
+                                <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400" placeholder="例: テンポが安定していた" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">次回の目標</label>
-                                <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 placeholder:text-slate-600" placeholder="例: 表現力を意識する" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">次回の目標</label>
+                                <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400" placeholder="例: 表現力を意識する" />
                             </div>
                         </div>
                     </div>
@@ -384,36 +388,36 @@ export default function ReportsView() {
                     {/* Preview */}
                     <div className="glass-card p-6 flex flex-col">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-lg">プレビュー</h3>
-                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedTemplate} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-emerald-500/20 text-emerald-400" : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 disabled:opacity-50 disabled:cursor-not-allowed"}`}>
+                            <h3 className="font-semibold text-lg text-gray-700">プレビュー</h3>
+                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedTemplate} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-emerald-100 text-emerald-700" : "bg-pink-100 text-pink-600 hover:bg-pink-200 disabled:opacity-50 disabled:cursor-not-allowed"}`}>
                                 {copied ? <><Check className="w-4 h-4" />コピーしました</> : <><Copy className="w-4 h-4" />コピー</>}
                             </button>
                         </div>
-                        <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl p-5 whitespace-pre-wrap text-slate-300 leading-relaxed">{generateMessage()}</div>
-                        <p className="text-sm text-slate-500 mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
+                        <div className="flex-1 bg-white border border-pink-200 rounded-xl p-5 whitespace-pre-wrap text-gray-700 leading-relaxed">{generateMessage()}</div>
+                        <p className="text-sm text-gray-500 mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
                     </div>
                 </div>
             )}
 
             {activeTab === "history" && (
                 <div className="glass-card">
-                    <div className="p-5 border-b border-slate-800">
-                        <h3 className="font-semibold text-lg">送信履歴</h3>
+                    <div className="p-5 border-b border-pink-100">
+                        <h3 className="font-semibold text-lg text-gray-700">送信履歴</h3>
                     </div>
                     {loadingHistory ? (
-                        <div className="p-8 text-center text-slate-500">読み込み中...</div>
+                        <div className="p-8 text-center text-gray-400">読み込み中...</div>
                     ) : reportHistory.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500">送信履歴はありません</div>
+                        <div className="p-8 text-center text-gray-400">送信履歴はありません</div>
                     ) : (
-                        <div className="divide-y divide-slate-800 max-h-[600px] overflow-y-auto">
+                        <div className="divide-y divide-pink-100 max-h-[600px] overflow-y-auto">
                             {reportHistory.map((record) => (
                                 <div key={record.id} className="p-5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="font-medium">{record.studentName}</p>
-                                        <span className="text-sm text-slate-500">{record.date}</span>
+                                        <p className="font-medium text-gray-700">{record.studentName}</p>
+                                        <span className="text-sm text-gray-500">{record.date}</span>
                                     </div>
-                                    <p className="text-xs text-violet-400 mb-2">{record.templateLabel}</p>
-                                    <p className="text-sm text-slate-400 whitespace-pre-wrap line-clamp-3">{record.message}</p>
+                                    <p className="text-xs text-pink-500 mb-2">{record.templateLabel}</p>
+                                    <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">{record.message}</p>
                                 </div>
                             ))}
                         </div>
@@ -424,21 +428,21 @@ export default function ReportsView() {
             {activeTab === "notifications" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="glass-card">
-                        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-                            <div className="p-2 bg-rose-500/10 rounded-lg"><AlertCircle className="w-5 h-5 text-rose-400" /></div>
+                        <div className="p-5 border-b border-pink-100 flex items-center gap-3">
+                            <div className="p-2 bg-rose-100 rounded-lg"><AlertCircle className="w-5 h-5 text-rose-600" /></div>
                             <div>
-                                <h3 className="font-semibold">未払い月謝</h3>
-                                <p className="text-sm text-slate-500">{new Date().getMonth() + 1}月分</p>
+                                <h3 className="font-semibold text-gray-700">未払い月謝</h3>
+                                <p className="text-sm text-gray-500">{new Date().getMonth() + 1}月分</p>
                             </div>
                         </div>
                         {unpaidStudents.length === 0 ? (
-                            <div className="p-8 text-center text-emerald-400">すべて支払い済みです ✓</div>
+                            <div className="p-8 text-center text-emerald-600">すべて支払い済みです ✓</div>
                         ) : (
-                            <div className="divide-y divide-slate-800">
+                            <div className="divide-y divide-pink-100">
                                 {unpaidStudents.map((s) => (
                                     <div key={s.studentId} className="p-4 flex items-center gap-3">
                                         <div className="w-2 h-2 bg-rose-500 rounded-full" />
-                                        <span>{s.name}</span>
+                                        <span className="text-gray-700">{s.name}</span>
                                     </div>
                                 ))}
                             </div>
@@ -446,24 +450,24 @@ export default function ReportsView() {
                     </div>
 
                     <div className="glass-card">
-                        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-                            <div className="p-2 bg-pink-500/10 rounded-lg"><Cake className="w-5 h-5 text-pink-400" /></div>
+                        <div className="p-5 border-b border-pink-100 flex items-center gap-3">
+                            <div className="p-2 bg-pink-100 rounded-lg"><Cake className="w-5 h-5 text-pink-500" /></div>
                             <div>
-                                <h3 className="font-semibold">今月の誕生日</h3>
-                                <p className="text-sm text-slate-500">30日以内</p>
+                                <h3 className="font-semibold text-gray-700">今月の誕生日</h3>
+                                <p className="text-sm text-gray-500">30日以内</p>
                             </div>
                         </div>
                         {birthdays.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500">今月の誕生日はありません</div>
+                            <div className="p-8 text-center text-gray-400">今月の誕生日はありません</div>
                         ) : (
-                            <div className="divide-y divide-slate-800">
+                            <div className="divide-y divide-pink-100">
                                 {birthdays.map((b, i) => (
                                     <div key={i} className="p-4 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <Cake className="w-4 h-4 text-pink-400" />
-                                            <span>{b.name}</span>
+                                            <Cake className="w-4 h-4 text-pink-500" />
+                                            <span className="text-gray-700">{b.name}</span>
                                         </div>
-                                        <span className="text-sm text-pink-400">{b.date} {b.daysUntil === 0 ? "🎉 今日！" : `(${b.daysUntil}日後)`}</span>
+                                        <span className="text-sm text-pink-500">{b.date} {b.daysUntil === 0 ? "🎉 今日！" : `(${b.daysUntil}日後)`}</span>
                                     </div>
                                 ))}
                             </div>
@@ -474,24 +478,24 @@ export default function ReportsView() {
 
             {activeTab === "invoice" && (
                 <div className="glass-card p-6 max-w-md">
-                    <h3 className="font-semibold text-lg mb-6">PDF請求書を生成</h3>
+                    <h3 className="font-semibold text-lg mb-6 text-gray-700">PDF請求書を生成</h3>
                     <div className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">生徒を選択</label>
-                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                            <label className="block text-sm font-medium text-gray-600 mb-2">生徒を選択</label>
+                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
                                 <option value="">選択してください</option>
                                 {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">対象月</label>
-                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                            <label className="block text-sm font-medium text-gray-600 mb-2">対象月</label>
+                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => <option key={m} value={m}>{m}月</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">金額</label>
-                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                            <label className="block text-sm font-medium text-gray-600 mb-2">金額</label>
+                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
                         </div>
                         <button onClick={generateInvoicePDF} disabled={!invoiceStudent} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
                             <FileDown className="w-5 h-5" />PDFをダウンロード
@@ -504,9 +508,9 @@ export default function ReportsView() {
             {activeTab === "annual" && annualSummary && (
                 <div className="glass-card p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold">年間収支レポート（確定申告用）</h3>
+                        <h3 className="text-xl font-bold text-gray-700">年間収支レポート（確定申告用）</h3>
                         <div className="flex gap-4">
-                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100">
+                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-white border border-pink-200 rounded-lg text-gray-700">
                                 {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}年</option>)}
                             </select>
                             <button onClick={generateAnnualReportPDF} className="px-4 py-2 premium-gradient rounded-lg text-white font-medium shadow-lg">
@@ -516,25 +520,25 @@ export default function ReportsView() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                            <p className="text-sm text-emerald-400 mb-1">総収入</p>
-                            <p className="text-2xl font-bold">¥{annualSummary.totalIncome.toLocaleString()}</p>
+                        <div className="p-4 bg-emerald-100 rounded-xl border border-emerald-200">
+                            <p className="text-sm text-emerald-700 mb-1">総収入</p>
+                            <p className="text-2xl font-bold text-gray-700">¥{annualSummary.totalIncome.toLocaleString()}</p>
                         </div>
-                        <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20">
-                            <p className="text-sm text-rose-400 mb-1">総支出</p>
-                            <p className="text-2xl font-bold">¥{annualSummary.totalExpense.toLocaleString()}</p>
+                        <div className="p-4 bg-rose-100 rounded-xl border border-rose-200">
+                            <p className="text-sm text-rose-700 mb-1">総支出</p>
+                            <p className="text-2xl font-bold text-gray-700">¥{annualSummary.totalExpense.toLocaleString()}</p>
                         </div>
-                        <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                            <p className="text-sm text-blue-400 mb-1">収支差額</p>
-                            <p className="text-2xl font-bold">¥{(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}</p>
+                        <div className="p-4 bg-blue-100 rounded-xl border border-blue-200">
+                            <p className="text-sm text-blue-700 mb-1">収支差額</p>
+                            <p className="text-2xl font-bold text-gray-700">¥{(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div>
-                            <h4 className="font-semibold mb-4">月別推移</h4>
+                            <h4 className="font-semibold mb-4 text-gray-700">月別推移</h4>
                             <table className="w-full text-sm text-left">
-                                <thead className="text-slate-400 border-b border-slate-700">
+                                <thead className="text-gray-600 border-b border-pink-200">
                                     <tr>
                                         <th className="pb-2">月</th>
                                         <th className="pb-2">収入</th>
@@ -542,32 +546,32 @@ export default function ReportsView() {
                                         <th className="pb-2">差額</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-800">
+                                <tbody className="divide-y divide-pink-100">
                                     {annualSummary.monthlyBreakdown.map((m, i) => (
-                                        <tr key={i} className="group hover:bg-slate-800/30">
-                                            <td className="py-2">{m.month}</td>
-                                            <td className="py-2 text-emerald-400">¥{m.income.toLocaleString()}</td>
-                                            <td className="py-2 text-rose-400">¥{m.expense.toLocaleString()}</td>
-                                            <td className="py-2">¥{(m.income - m.expense).toLocaleString()}</td>
+                                        <tr key={i} className="group hover:bg-pink-50">
+                                            <td className="py-2 text-gray-700">{m.month}</td>
+                                            <td className="py-2 text-emerald-600">¥{m.income.toLocaleString()}</td>
+                                            <td className="py-2 text-rose-600">¥{m.expense.toLocaleString()}</td>
+                                            <td className="py-2 text-gray-700">¥{(m.income - m.expense).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                         <div>
-                            <h4 className="font-semibold mb-4">経費内訳</h4>
+                            <h4 className="font-semibold mb-4 text-gray-700">経費内訳</h4>
                             <table className="w-full text-sm text-left">
-                                <thead className="text-slate-400 border-b border-slate-700">
+                                <thead className="text-gray-600 border-b border-pink-200">
                                     <tr>
                                         <th className="pb-2">カテゴリ</th>
                                         <th className="pb-2">金額</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-800">
+                                <tbody className="divide-y divide-pink-100">
                                     {annualSummary.expenseByCategory.map((e, i) => (
-                                        <tr key={i} className="group hover:bg-slate-800/30">
-                                            <td className="py-2">{e.category}</td>
-                                            <td className="py-2">¥{e.amount.toLocaleString()}</td>
+                                        <tr key={i} className="group hover:bg-pink-50">
+                                            <td className="py-2 text-gray-700">{e.category}</td>
+                                            <td className="py-2 text-gray-700">¥{e.amount.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -580,19 +584,19 @@ export default function ReportsView() {
             {/* Template Modal */}
             {isTemplateModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsTemplateModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                        <button onClick={() => setIsTemplateModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsTemplateModalOpen(false)} />
+                    <div className="relative z-10 w-full max-w-lg bg-white border border-pink-200 rounded-3xl p-8 shadow-2xl">
+                        <button onClick={() => setIsTemplateModalOpen(false)} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingTemplate ? "テンプレートを編集" : "新規テンプレート"}</h3>
                         <form onSubmit={handleSaveTemplate} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">テンプレート名</label>
-                                <input name="label" required defaultValue={editingTemplate?.label} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 発表会に向けて" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">テンプレート名</label>
+                                <input name="label" required defaultValue={editingTemplate?.label} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 発表会に向けて" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">テンプレート内容</label>
-                                <textarea name="text" rows={8} required defaultValue={editingTemplate?.text} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="利用可能な変数: {曲名}, {良かった点}, {次回の目標}, {アドバイス}" />
-                                <p className="text-xs text-slate-500 mt-2">変数: {"{曲名}"}, {"{良かった点}"}, {"{次回の目標}"}, {"{アドバイス}"}</p>
+                                <label className="block text-sm font-medium text-gray-600 mb-2">テンプレート内容</label>
+                                <textarea name="text" rows={8} required defaultValue={editingTemplate?.text} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="利用可能な変数: {曲名}, {良かった点}, {次回の目標}, {アドバイス}" />
+                                <p className="text-xs text-gray-500 mt-2">変数: {"{曲名}"}, {"{良かった点}"}, {"{次回の目標}"}, {"{アドバイス}"}</p>
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingTemplate ? "更新する" : "保存する")}</button>
                         </form>

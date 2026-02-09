@@ -327,7 +327,7 @@ export async function getLessonPayments(year: number, month: number): Promise<Le
         return rows
             .filter((row) => {
                 const lessonDate = new Date(row[3]);
-                return lessonDate.getFullYear() === year && lessonDate.getMonth() + 1 === month;
+                return lessonDate.getFullYear() === year && lessonDate.getMonth() === month;
             })
             .map((row) => ({
                 id: Number(row[0]),

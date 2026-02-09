@@ -13,7 +13,7 @@ export default function ScheduleView() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [currentDate, setCurrentDate] = useState(new Date());
-    const [viewMode, setViewMode] = useState<ViewMode>("month");
+    const [viewMode, setViewMode] = useState<ViewMode>("week");
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
@@ -207,7 +207,7 @@ export default function ScheduleView() {
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-gradient mb-1 sm:mb-2">スケジュール</h2>
-                        <p className="text-sm sm:text-base text-slate-400">レッスンスケジュールを管理</p>
+                        <p className="text-sm sm:text-base text-gray-500">レッスンスケジュールを管理</p>
                     </div>
                     <button onClick={openAddModal} className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105 text-sm sm:text-base shrink-0">
                         <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -216,23 +216,23 @@ export default function ScheduleView() {
                     </button>
                 </div>
                 {/* View Mode Toggle */}
-                <div className="flex gap-1 p-1 bg-slate-800/50 rounded-xl w-fit">
-                    <button onClick={() => setViewMode("month")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "month" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <div className="flex gap-1 p-1 bg-white/80 rounded-xl w-fit border border-pink-200">
+                    <button onClick={() => setViewMode("month")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "month" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                         <Calendar className="w-4 h-4" />月
                     </button>
-                    <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "week" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
+                    <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg font-medium text-sm ${viewMode === "week" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
                         <CalendarDays className="w-4 h-4" />週
                     </button>
                 </div>
             </header>
 
             {/* Date Navigation */}
-            <div className="flex items-center justify-center gap-4 bg-slate-800/50 p-2 rounded-xl border border-slate-700 w-fit mx-auto">
-                <button onClick={handlePrev} className="p-2 hover:bg-slate-700 rounded-lg transition-colors"><ChevronLeft className="w-5 h-5 text-slate-400" /></button>
-                <span className="font-bold text-lg min-w-[180px] text-center">
+            <div className="flex items-center justify-center gap-4 bg-white/80 p-2 rounded-xl border border-pink-200 w-fit mx-auto">
+                <button onClick={handlePrev} className="p-2 hover:bg-pink-50 rounded-lg transition-colors"><ChevronLeft className="w-5 h-5 text-gray-600" /></button>
+                <span className="font-bold text-lg min-w-[180px] text-center text-gray-700">
                     {viewMode === "month" ? formatMonthYear(currentDate) : formatWeekRange(currentDate)}
                 </span>
-                <button onClick={handleNext} className="p-2 hover:bg-slate-700 rounded-lg transition-colors"><ChevronRight className="w-5 h-5 text-slate-400" /></button>
+                <button onClick={handleNext} className="p-2 hover:bg-pink-50 rounded-lg transition-colors"><ChevronRight className="w-5 h-5 text-gray-600" /></button>
             </div>
 
             {/* Week View */}
@@ -242,19 +242,19 @@ export default function ScheduleView() {
                         const dayEvents = getEventsForDay(day);
                         const isToday = day.toDateString() === new Date().toDateString();
                         return (
-                            <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-violet-500/50" : ""}`}>
-                                <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-slate-800">
-                                    <p className="text-xs sm:text-sm text-slate-500">{dayNames[i]}</p>
-                                    <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-violet-400" : ""}`}>{day.getDate()}</p>
+                            <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-pink-400" : ""}`}>
+                                <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-pink-100">
+                                    <p className="text-xs sm:text-sm text-gray-500">{dayNames[i]}</p>
+                                    <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-pink-500" : "text-gray-700"}`}>{day.getDate()}</p>
                                 </div>
                                 <div className="space-y-1.5 sm:space-y-2">
                                     {dayEvents.length === 0 ? (
-                                        <p className="text-xs text-slate-600 text-center py-2 sm:py-4">-</p>
+                                        <p className="text-xs text-gray-400 text-center py-2 sm:py-4">-</p>
                                     ) : (
                                         dayEvents.map((event, idx) => (
-                                            <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-slate-800/50 transition-colors`}>
-                                                <p className="text-[10px] sm:text-xs text-violet-400 mb-0.5">{formatTime(event.start)}</p>
-                                                <p className="text-xs sm:text-sm font-medium truncate">{event.title}</p>
+                                            <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-pink-50 transition-colors`}>
+                                                <p className="text-[10px] sm:text-xs text-pink-500 mb-0.5">{formatTime(event.start)}</p>
+                                                <p className="text-xs sm:text-sm font-medium truncate text-gray-700">{event.title}</p>
                                             </button>
                                         ))
                                     )}
@@ -269,22 +269,22 @@ export default function ScheduleView() {
             {viewMode === "month" && (
                 <div className="space-y-4">
                     {events.length === 0 ? (
-                        <div className="glass-card p-12 text-center"><p className="text-slate-500">この月の予定はありません</p></div>
+                        <div className="glass-card p-12 text-center"><p className="text-gray-400">この月の予定はありません</p></div>
                     ) : (
                         <div className="space-y-3">
                             {events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map((event, index) => (
-                                <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-5 flex gap-5 text-left hover:bg-slate-800/50 transition-all">
+                                <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-5 flex gap-5 text-left hover:bg-pink-50 transition-all">
                                     <div className="flex flex-col items-center min-w-[60px]">
-                                        <div className="text-sm text-slate-400">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
-                                        <div className="text-xl font-bold text-slate-200">{new Date(event.start).getDate()}</div>
+                                        <div className="text-sm text-gray-500">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
+                                        <div className="text-xl font-bold text-gray-700">{new Date(event.start).getDate()}</div>
                                     </div>
-                                    <div className="w-0.5 bg-slate-800 self-stretch mx-2" />
+                                    <div className="w-0.5 bg-pink-200 self-stretch mx-2" />
                                     <div className="flex-1">
                                         <div className="flex items-start justify-between mb-2">
-                                            <h4 className="text-lg font-semibold">{event.title}</h4>
-                                            <span className="text-sm font-medium text-violet-400 bg-violet-500/10 px-3 py-1 rounded-full">{formatTime(event.start)}</span>
+                                            <h4 className="text-lg font-semibold text-gray-700">{event.title}</h4>
+                                            <span className="text-sm font-medium text-pink-600 bg-pink-100 px-3 py-1 rounded-full">{formatTime(event.start)}</span>
                                         </div>
-                                        {event.location && <p className="text-sm text-slate-400 flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.location}</p>}
+                                        {event.location && <p className="text-sm text-gray-500 flex items-center gap-1.5"><MapPin className="w-4 h-4" />{event.location}</p>}
                                     </div>
                                 </button>
                             ))}
@@ -296,48 +296,48 @@ export default function ScheduleView() {
             {/* Event Detail Modal */}
             {selectedEvent && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
-                    <div className="relative z-10 w-full sm:max-w-md bg-slate-900 border border-slate-800 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom">
-                        <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
+                    <div className="relative z-10 w-full sm:max-w-md bg-white border border-pink-200 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom shadow-2xl">
+                        <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
 
                         <h3 className="text-2xl font-bold text-gradient mb-6">{selectedEvent.title}</h3>
 
                         <div className="space-y-5">
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-violet-500/10 rounded-xl"><Clock className="w-5 h-5 text-violet-400" /></div>
+                                <div className="p-3 bg-pink-100 rounded-xl"><Clock className="w-5 h-5 text-pink-500" /></div>
                                 <div>
-                                    <p className="text-sm text-slate-400 mb-1">日時</p>
-                                    <p className="font-semibold">{new Date(selectedEvent.start).toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" })}</p>
-                                    <p className="text-slate-300">{formatTime(selectedEvent.start)} 〜 {formatTime(selectedEvent.end)}</p>
+                                    <p className="text-sm text-gray-500 mb-1">日時</p>
+                                    <p className="font-semibold text-gray-700">{new Date(selectedEvent.start).toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" })}</p>
+                                    <p className="text-gray-600">{formatTime(selectedEvent.start)} 〜 {formatTime(selectedEvent.end)}</p>
                                 </div>
                             </div>
 
                             {selectedEvent.location && (
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-blue-500/10 rounded-xl"><MapPin className="w-5 h-5 text-blue-400" /></div>
+                                    <div className="p-3 bg-blue-100 rounded-xl"><MapPin className="w-5 h-5 text-blue-500" /></div>
                                     <div>
-                                        <p className="text-sm text-slate-400 mb-1">場所</p>
-                                        <p className="font-medium text-slate-200">{selectedEvent.location}</p>
+                                        <p className="text-sm text-gray-500 mb-1">場所</p>
+                                        <p className="font-medium text-gray-700">{selectedEvent.location}</p>
                                     </div>
                                 </div>
                             )}
 
                             {selectedEvent.description && (
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-emerald-500/10 rounded-xl"><AlignLeft className="w-5 h-5 text-emerald-400" /></div>
+                                    <div className="p-3 bg-emerald-100 rounded-xl"><AlignLeft className="w-5 h-5 text-emerald-500" /></div>
                                     <div>
-                                        <p className="text-sm text-slate-400 mb-1">詳細</p>
-                                        <p className="text-slate-300 whitespace-pre-wrap">{selectedEvent.description}</p>
+                                        <p className="text-sm text-gray-500 mb-1">詳細</p>
+                                        <p className="text-gray-700 whitespace-pre-wrap">{selectedEvent.description}</p>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         <div className="flex gap-3 mt-8">
-                            <button onClick={() => openEditModal(selectedEvent)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium text-white flex items-center justify-center gap-2">
+                            <button onClick={() => openEditModal(selectedEvent)} className="flex-1 py-3 bg-white hover:bg-pink-50 border border-pink-200 rounded-xl font-medium text-gray-700 flex items-center justify-center gap-2">
                                 <Pencil className="w-4 h-4" />編集
                             </button>
-                            <button onClick={() => handleDeleteEvent(selectedEvent.id)} className="flex-1 py-3 bg-rose-500/20 hover:bg-rose-500/30 rounded-xl font-medium text-rose-300 flex items-center justify-center gap-2">
+                            <button onClick={() => handleDeleteEvent(selectedEvent.id)} className="flex-1 py-3 bg-rose-100 hover:bg-rose-200 rounded-xl font-medium text-rose-700 flex items-center justify-center gap-2">
                                 <Trash2 className="w-4 h-4" />削除
                             </button>
                         </div>
@@ -348,21 +348,21 @@ export default function ScheduleView() {
             {/* Add/Edit Event Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
-                    <div className="relative z-10 w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                        <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
+                    <div className="relative z-10 w-full max-w-md bg-white border border-pink-200 rounded-3xl p-8 shadow-2xl">
+                        <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingEvent ? "レッスンを編集" : "新規レッスン"}</h3>
                         <form onSubmit={handleSaveEvent} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">タイトル（生徒名など） <span className="text-red-400">*</span></label>
-                                <input name="title" list="student-names" required defaultValue={editingEvent?.title} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 山田花子" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">タイトル（生徒名など） <span className="text-red-500">*</span></label>
+                                <input name="title" list="student-names" required defaultValue={editingEvent?.title} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 山田花子" />
                                 <datalist id="student-names">
                                     {students.map(s => <option key={s.id} value={s.name} />)}
                                 </datalist>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">レッスン時間</label>
-                                <select value={lessonDuration} onChange={handleDurationChange} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
+                                <label className="block text-sm font-medium text-gray-600 mb-2">レッスン時間</label>
+                                <select value={lessonDuration} onChange={handleDurationChange} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
                                     <option value={30}>30分</option>
                                     <option value={45}>45分</option>
                                     <option value={60}>60分</option>
@@ -371,21 +371,21 @@ export default function ScheduleView() {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-2">開始日時 <span className="text-red-400">*</span></label>
-                                    <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                                    <label className="block text-sm font-medium text-gray-600 mb-2">開始日時 <span className="text-red-500">*</span></label>
+                                    <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-2">終了日時 <span className="text-red-400">*</span></label>
-                                    <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
+                                    <label className="block text-sm font-medium text-gray-600 mb-2">終了日時 <span className="text-red-500">*</span></label>
+                                    <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">場所</label>
-                                <input name="location" defaultValue={editingEvent?.location} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 自宅スタジオ" />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">場所</label>
+                                <input name="location" defaultValue={editingEvent?.location} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 自宅スタジオ" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">メモ</label>
-                                <textarea name="description" rows={3} defaultValue={editingEvent?.description} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="練習曲、注意点など..." />
+                                <label className="block text-sm font-medium text-gray-600 mb-2">メモ</label>
+                                <textarea name="description" rows={3} defaultValue={editingEvent?.description} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="練習曲、注意点など..." />
                             </div>
                             <button type="submit" disabled={saving} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50">
                                 {saving ? "保存中..." : (editingEvent ? "更新する" : "作成する")}

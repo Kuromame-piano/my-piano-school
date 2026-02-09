@@ -11,6 +11,7 @@ interface Piece {
     startedAt: string;
     completedAt?: string;
     coverImage?: string;
+    sheetMusicId?: number;  // Reference to sheet music library
 }
 
 interface LessonNote {
@@ -38,6 +39,8 @@ export interface Student {
     gradeLevel?: string;
     status?: string;
     recitalHistory?: RecitalRecord[];
+    paymentType?: "monthly" | "per-lesson";  // 月謝制 or 都度払い
+    monthlyFee?: number;  // 月謝額または1レッスンあたりの料金
 }
 
 export interface RecitalRecord {
@@ -65,7 +68,7 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A2:P`,
+            range: `${SHEET_NAME}!A2:R`,
         });
 
         const rows = response.data.values;
@@ -88,6 +91,8 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
             gradeLevel: row[13] || "",
             status: row[14] || "継続中",
             recitalHistory: row[15] ? JSON.parse(row[15]) : [],
+            paymentType: (row[16] as "monthly" | "per-lesson") || "monthly",
+            monthlyFee: row[17] ? Number(row[17]) : 0,
         }));
 
         const result = includeArchived ? students : students.filter((s) => !s.archived);
@@ -131,13 +136,15 @@ export async function saveStudent(student: Student) {
             student.gradeLevel || "",
             student.status || "継続中",
             JSON.stringify(student.recitalHistory || []),
+            student.paymentType || "monthly",
+            student.monthlyFee || 0,
         ];
 
         if (existingIndex !== -1) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${SHEET_NAME}!A${rowNumber}:P${rowNumber}`,
+                range: `${SHEET_NAME}!A${rowNumber}:R${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],
