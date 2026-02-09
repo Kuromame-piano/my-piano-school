@@ -132,49 +132,46 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
     };
 
     const handleUpdateProgress = async (studentId: number, pieceId: number, progress: number) => {
-        let updatedStudent: Student | undefined;
-        setStudents((prev) =>
-            prev.map((s) => {
-                if (s.id === studentId) {
-                    updatedStudent = { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)) };
-                    return updatedStudent;
-                }
-                return s;
-            })
-        );
+        const student = students.find((s) => s.id === studentId);
+        if (!student) return;
+
+        const updatedStudent = {
+            ...student,
+            pieces: student.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)),
+        };
+
+        // UIを即座に更新
+        setStudents((prev) => prev.map((s) => (s.id === studentId ? updatedStudent : s)));
 
         if (selectedStudent?.id === studentId) {
-            setSelectedStudent((prev) =>
-                prev ? { ...prev, pieces: prev.pieces.map((p) => (p.id === pieceId ? { ...p, progress } : p)) } : null
-            );
+            setSelectedStudent(updatedStudent);
         }
 
-        if (updatedStudent) await saveStudent(updatedStudent);
-        await loadStudents();
+        // データを保存
+        await saveStudent(updatedStudent);
     };
 
     const handleCompletePiece = async (studentId: number, pieceId: number) => {
-        const today = new Date().toLocaleDateString("ja-JP");
-        let updatedStudent: Student | undefined;
+        const student = students.find((s) => s.id === studentId);
+        if (!student) return;
 
-        setStudents((prev) =>
-            prev.map((s) => {
-                if (s.id === studentId) {
-                    updatedStudent = { ...s, pieces: s.pieces.map((p) => (p.id === pieceId ? { ...p, status: "completed", progress: 100, completedAt: today } : p)) };
-                    return updatedStudent;
-                }
-                return s;
-            })
-        );
+        const today = new Date().toLocaleDateString("ja-JP");
+        const updatedStudent = {
+            ...student,
+            pieces: student.pieces.map((p) =>
+                p.id === pieceId ? { ...p, status: "completed" as const, progress: 100, completedAt: today } : p
+            ),
+        };
+
+        // UIを即座に更新
+        setStudents((prev) => prev.map((s) => (s.id === studentId ? updatedStudent : s)));
 
         if (selectedStudent?.id === studentId) {
-            setSelectedStudent((prev) =>
-                prev ? { ...prev, pieces: prev.pieces.map((p) => (p.id === pieceId ? { ...p, status: "completed", progress: 100, completedAt: today } : p)) } : null
-            );
+            setSelectedStudent(updatedStudent);
         }
 
-        if (updatedStudent) await saveStudent(updatedStudent);
-        await loadStudents();
+        // データを保存
+        await saveStudent(updatedStudent);
     };
 
     const openAddPieceModal = (studentId: number) => {
@@ -212,28 +209,31 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                 coverImage: coverImage || undefined,
                 sheetMusicId,
             };
-            let updatedStudent: Student | undefined;
 
-            setStudents((prev) =>
-                prev.map((s) => {
-                    if (s.id === addingPieceForStudentId) {
-                        updatedStudent = { ...s, pieces: [newPiece, ...s.pieces] };
-                        return updatedStudent;
-                    }
-                    return s;
-                })
-            );
+            const student = students.find((s) => s.id === addingPieceForStudentId);
+            if (student) {
+                const updatedStudent = {
+                    ...student,
+                    pieces: [newPiece, ...student.pieces],
+                };
 
-            if (selectedStudent?.id === addingPieceForStudentId) {
-                setSelectedStudent((prev) => (prev ? { ...prev, pieces: [newPiece, ...prev.pieces] } : null));
+                // UIを即座に更新
+                setStudents((prev) => prev.map((s) => (s.id === addingPieceForStudentId ? updatedStudent : s)));
+
+                if (selectedStudent?.id === addingPieceForStudentId) {
+                    setSelectedStudent(updatedStudent);
+                }
+
+                // データを保存
+                await saveStudent(updatedStudent);
             }
 
-            if (updatedStudent) await saveStudent(updatedStudent);
-            await loadStudents();
             setIsAddPieceModalOpen(false);
             setAddingPieceForStudentId(null);
             setUseLibrary(false);
-        } finally {
+            setIsSaving(false);  // surely reset saving state
+        } catch (error) {
+            console.error("Failed to add piece:", error);
             setIsSaving(false);
         }
     };
