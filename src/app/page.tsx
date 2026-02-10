@@ -84,7 +84,7 @@ export default function Home() {
                 </header>
 
                 {/* メインコンテンツ */}
-                <div className="p-4 sm:p-6 lg:p-12">
+                <div className="p-4 sm:p-6 md:p-8 lg:p-12 safe-area-bottom">
                     <GlobalSearch onSelect={handleSearchSelect} />
                     <div className="max-w-6xl mx-auto">
                         {renderView()}

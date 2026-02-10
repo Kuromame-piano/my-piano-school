@@ -54,7 +54,7 @@ export default function Sidebar({ activeView, onViewChange, isOpen = true, onClo
             <aside
                 className={`
                     fixed lg:static inset-y-0 left-0 z-50
-                    w-56 sm:w-64 h-screen border-r border-card-border bg-card-solid lg:bg-card-solid/90 
+                    w-64 sm:w-72 lg:w-64 h-screen border-r border-card-border bg-card-solid lg:bg-card-solid/90
                     p-4 sm:p-6 flex flex-col shrink-0
                     transform transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -92,7 +92,7 @@ export default function Sidebar({ activeView, onViewChange, isOpen = true, onClo
                             <button
                                 key={item.id}
                                 onClick={() => handleNavClick(item.id)}
-                                className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${isActive
+                                className={`w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl font-medium transition-all text-sm sm:text-base ${isActive
                                     ? "bg-accent-bg text-accent border border-accent/20"
                                     : "text-t-secondary hover:text-accent hover:bg-accent-bg-hover active:bg-accent-bg"
                                     }`}

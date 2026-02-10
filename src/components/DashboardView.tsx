@@ -283,7 +283,7 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                                 </div>
                                 <button
                                     onClick={() => onNavigate("schedule")}
-                                    className="text-xs text-accent hover:underline"
+                                    className="text-sm text-accent hover:underline"
                                 >
                                     全て見る
                                 </button>
@@ -358,7 +358,7 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                             </h3>
                             <button
                                 onClick={() => onNavigate("finance")}
-                                className="text-xs text-t-secondary hover:text-t-primary"
+                                className="text-sm text-t-secondary hover:text-t-primary"
                             >
                                 管理
                             </button>
@@ -400,9 +400,9 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                                         <div key={i} className="p-3 hover:bg-card-bg-hover">
                                             <div className="flex justify-between items-start mb-1">
                                                 <span className="text-sm font-bold text-t-primary">{item.studentName}</span>
-                                                <span className="text-xs text-t-muted">{item.date}</span>
+                                                <span className="text-xs sm:text-sm text-t-muted">{item.date}</span>
                                             </div>
-                                            <p className="text-xs text-t-secondary line-clamp-1">
+                                            <p className="text-xs sm:text-sm text-t-secondary line-clamp-1">
                                                 「{item.pieceTitle}」を仕上げました！
                                             </p>
                                         </div>
@@ -434,8 +434,8 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                                                 <span className="text-sm font-medium text-t-primary">{s.name}</span>
                                             </div>
                                             <div className="text-right">
-                                                <span className="block text-xs text-t-secondary">{s.date}</span>
-                                                <span className="block text-xs font-bold text-accent">{s.age}歳</span>
+                                                <span className="block text-xs sm:text-sm text-t-secondary">{s.date}</span>
+                                                <span className="block text-xs sm:text-sm font-bold text-accent">{s.age}歳</span>
                                             </div>
                                         </div>
                                     ))}

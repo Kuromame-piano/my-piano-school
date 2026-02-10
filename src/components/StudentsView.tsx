@@ -343,7 +343,7 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
             {loading ? (
                 <div className="text-center py-12 text-t-muted">読み込み中...</div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {filteredStudents.map((student) => (
                         <button key={student.id} onClick={() => { setSelectedStudent(student); setActiveTab("active"); }} className={`glass-card p-5 text-left hover:bg-accent-bg-hover transition-all group ${student.archived ? "opacity-60" : ""} ${student.status === "休会中" ? "border-amber-400" : ""} ${student.status === "退会" ? "border-rose-400" : ""}`}>
                             <div className="flex items-start gap-4">
@@ -382,9 +382,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Student Detail Modal */}
             {selectedStudent && (
-                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
-                    <div className="relative z-10 w-full sm:max-w-4xl bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-8 max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setSelectedStudent(null)} />
+                    <div className="relative z-10 w-full sm:max-w-3xl lg:max-w-4xl bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => setSelectedStudent(null)} className="absolute top-4 right-4 z-20 p-2 text-t-muted hover:text-accent bg-accent-bg rounded-full"><X className="w-5 h-5" /></button>
 
                         <div className="mb-6 sm:mb-8">
@@ -405,7 +405,7 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                                         {selectedStudent.email && <p className="text-gray-500 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{selectedStudent.email}</p>}
                                         {selectedStudent.birthDate && <p className="text-gray-500 flex items-center gap-1.5"><Cake className="w-3.5 h-3.5" />{selectedStudent.birthDate}</p>}
                                         <p className="text-gray-500 flex items-center gap-1.5">
-                                            <span className={`px-1.5 py-0.5 rounded text-[10px] ${selectedStudent.paymentType === "monthly" ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`}>
+                                            <span className={`px-2 py-0.5 rounded text-xs ${selectedStudent.paymentType === "monthly" ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"}`}>
                                                 {selectedStudent.paymentType === "monthly" ? "月謝制" : "都度払い"}
                                             </span>
                                             ¥{(selectedStudent.monthlyFee || 0).toLocaleString()}
@@ -633,9 +633,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Add/Edit Student Modal */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-2xl bg-modal-bg border border-modal-border rounded-3xl p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddModalOpen(false)} />
+                    <div className="relative z-10 w-full sm:max-w-xl lg:max-w-2xl bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingStudent ? "生徒情報を編集" : "新規生徒の登録"}</h3>
                         <form onSubmit={async (e) => {
@@ -677,7 +677,7 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                                 setIsSaving(false);
                             }
                         }} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                                 <div className="space-y-4">
                                     <h4 className="font-semibold text-t-primary border-b border-input-border pb-2 mb-4">基本情報</h4>
                                     <div><label className="block text-sm font-medium text-t-secondary mb-2">お名前 <span className="text-red-500">*</span></label><input name="name" defaultValue={editingStudent?.name} required className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: 山田 花子" /></div>
@@ -768,9 +768,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Add Note Modal */}
             {isAddNoteModalOpen && selectedStudent && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddNoteModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddNoteModalOpen(false)} />
+                    <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => setIsAddNoteModalOpen(false)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">レッスンノートを追加</h3>
                         <form onSubmit={handleAddLessonNote} className="space-y-5">
@@ -790,9 +790,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Edit Note Modal */}
             {editingNote && selectedStudent && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setEditingNote(null)} />
-                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setEditingNote(null)} />
+                    <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => setEditingNote(null)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">レッスンノートを編集</h3>
                         <form onSubmit={handleUpdateNote} className="space-y-5">
@@ -812,9 +812,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Add Piece Modal */}
             {isAddPieceModalOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); setUseLibrary(false); }} />
-                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); setUseLibrary(false); }} />
+                    <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => { setIsAddPieceModalOpen(false); setAddingPieceForStudentId(null); setUseLibrary(false); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">新しい曲を追加</h3>
 
@@ -860,9 +860,9 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
 
             {/* Add Recital Modal */}
             {isAddRecitalModalOpen && selectedStudent && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddRecitalModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setIsAddRecitalModalOpen(false)} />
+                    <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                         <button onClick={() => setIsAddRecitalModalOpen(false)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">発表会履歴を追加</h3>
                         <form onSubmit={async (e) => {

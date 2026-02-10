@@ -1073,9 +1073,9 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
             {/* Event Detail Modal */}
             {
                 selectedEvent && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
-                        <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
-                        <div className="relative z-10 w-full sm:max-w-md bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom shadow-2xl">
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+                        <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
+                        <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                             <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
 
                             <h3 className="text-2xl font-bold text-gradient mb-6">{selectedEvent.title}</h3>
@@ -1128,8 +1128,8 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
             {
                 isAddModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-                        <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
-                        <div className="relative z-10 w-full sm:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto safe-area-bottom">
+                        <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
+                        <div className="relative z-10 w-full sm:max-w-lg lg:max-w-xl bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
                             <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary z-20"><X className="w-6 h-6" /></button>
                             <h3 className="text-2xl font-bold text-gradient mb-6">{editingEvent ? "レッスンを編集" : "新規レッスン"}</h3>
                             <form onSubmit={handleSaveEvent} className={`space-y-6 transition-opacity ${formState.saving ? "opacity-50" : "opacity-100"}`}>

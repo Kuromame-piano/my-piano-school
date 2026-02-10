@@ -53,7 +53,7 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
     };
 
     return (
-        <div className="relative w-full max-w-md mb-8 ml-auto" ref={wrapperRef}>
+        <div className="relative w-full max-w-full sm:max-w-md mb-6 sm:mb-8 ml-auto" ref={wrapperRef}>
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-t-muted" />
                 <input
@@ -62,7 +62,7 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onFocus={() => setIsOpen(true)}
                     placeholder="生徒を検索..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-input-bg border border-input-border rounded-xl text-sm text-input-text focus:border-input-border-focus focus:bg-input-bg transition-all placeholder:text-t-placeholder shadow-sm"
+                    className="w-full pl-10 pr-10 py-3 bg-input-bg border border-input-border rounded-xl text-base sm:text-sm text-input-text focus:border-input-border-focus focus:bg-input-bg transition-all placeholder:text-t-placeholder shadow-sm"
                 />
                 {query && (
                     <button
@@ -81,7 +81,7 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
                             <button
                                 key={student.id}
                                 onClick={() => handleSelect(student)}
-                                className="w-full text-left px-4 py-3 hover:bg-accent-bg-hover transition-colors flex items-center gap-3"
+                                className="w-full text-left px-4 py-3.5 hover:bg-accent-bg-hover active:bg-accent-bg transition-colors flex items-center gap-3"
                             >
                                 <div className={`w-8 h-8 rounded-lg ${student.color} flex items-center justify-center text-white text-xs font-bold`}>
                                     {student.name[0]}

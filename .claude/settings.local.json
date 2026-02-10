@@ -7,7 +7,8 @@
       "Bash(timeout /t 10)",
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(wc:*)"
     ]
   }
 }
