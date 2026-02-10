@@ -87,7 +87,7 @@ const SUGGESTIONS = {
     ]
 };
 
-export default function ReportsView() {
+export default function ReportsView({ initialStudentId }: { initialStudentId?: number }) {
     // State
     const [step, setStep] = useState(1);
     const [students, setStudents] = useState<Student[]>([]);
@@ -118,6 +118,14 @@ export default function ReportsView() {
         try {
             const studentData = await getStudents();
             setStudents(studentData);
+
+            // Handle initial student selection if provided
+            if (initialStudentId) {
+                const student = studentData.find(s => s.id === initialStudentId);
+                if (student) {
+                    handleStudentSelect(student);
+                }
+            }
         } catch (error) {
             console.error("Failed to load students:", error);
         } finally {

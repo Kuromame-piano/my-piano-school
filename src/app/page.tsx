@@ -14,42 +14,55 @@ import GlobalSearch from "@/components/GlobalSearch";
 
 type View = "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital" | "library";
 
+export type NavigationPayload = {
+    view: View;
+    studentId?: number;
+    initialTab?: "active" | "completed" | "notes" | "progress" | "recital";
+    scheduleStudentName?: string;
+};
+
 export default function Home() {
-    const [activeView, setActiveView] = useState<View>("dashboard");
-    const [globalSearchStudentId, setGlobalSearchStudentId] = useState<number | null>(null);
+    const [viewState, setViewState] = useState<NavigationPayload>({ view: "dashboard" });
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+    const handleNavigate = (payload: NavigationPayload | View) => {
+        if (typeof payload === "string") {
+            setViewState({ view: payload });
+        } else {
+            setViewState(payload);
+        }
+    };
+
     const handleSearchSelect = (studentId: number) => {
-        setGlobalSearchStudentId(studentId);
-        setActiveView("students");
+        setViewState({ view: "students", studentId });
     };
 
     const renderView = () => {
-        switch (activeView) {
+        switch (viewState.view) {
             case "dashboard":
-                return <DashboardView onViewChange={setActiveView} />;
+                return <DashboardView onNavigate={handleNavigate} />;
             case "students":
-                return <StudentsView initialStudentId={globalSearchStudentId} />;
+                return <StudentsView initialStudentId={viewState.studentId} initialTab={viewState.initialTab} />;
             case "finance":
                 return <FinanceView />;
             case "reports":
-                return <ReportsView />;
+                return <ReportsView initialStudentId={viewState.studentId} />;
             case "schedule":
-                return <ScheduleView />;
+                return <ScheduleView initialStudentName={viewState.scheduleStudentName} />;
             case "recital":
                 return <RecitalView />;
             case "library":
                 return <SheetMusicView />;
             default:
-                return <DashboardView onViewChange={setActiveView} />;
+                return <DashboardView onNavigate={handleNavigate} />;
         }
     };
 
     return (
         <div className="flex h-screen overflow-hidden">
             <Sidebar
-                activeView={activeView}
-                onViewChange={setActiveView}
+                activeView={viewState.view}
+                onViewChange={(view) => handleNavigate(view)}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
             />

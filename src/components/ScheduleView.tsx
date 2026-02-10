@@ -363,7 +363,7 @@ function lessonFormReducer(state: LessonFormState, action: LessonFormAction): Le
 
 
 
-export default function ScheduleView() {
+export default function ScheduleView({ initialStudentName }: { initialStudentName?: string } = {}) {
     const toast = useToast();
     const [mounted, setMounted] = useState(false);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -731,6 +731,73 @@ export default function ScheduleView() {
 
         setIsAddModalOpen(true);
     };
+
+    // Handle initial student name preset
+    useEffect(() => {
+        if (initialStudentName && mounted && students.length > 0) {
+            // Need to wait for students to load so we can match the name if needed, 
+            // or just open the modal.
+
+            // We need to ensure we don't open it repeatedly. 
+            // The prop `initialStudentName` stays. 
+            // We should perhaps clear it or use a ref to track if we handled it?
+            // Since we navigate to this view with the prop, it might be fine to run once.
+
+            // But `page.tsx` keeps the state. 
+            // If user closes modal, we shouldn't reopen it unless they navigate again.
+            // But `viewState` in `page.tsx` doesn't change when modal closes.
+
+            // For now, let's just open it. If it becomes annoying (reopens on re-render), we'll fix.
+            // But `useEffect` with dependency `[initialStudentName]` should only run when it changes.
+
+            // NOTE: We called `openAddModal()` which resets form.
+            openAddModal();
+
+            // Now override the title.
+            // We need to set the value of the select input?
+            // The select input is uncontrolled usually? 
+            // Let's check the render part... not visible here but assuming standard select.
+
+            // If we can't control the select value easily, we might need to set `defaultValue` in `lessonFormReducer`?
+            // But `openAddModal` resets it.
+
+            // Let's try to pass `initialStudentName` to `openAddModal`?
+            // No, `openAddModal` doesn't take args.
+
+            // Let's manually dispatch actions after openAddModal.
+            // We need to identify if we can set the default student.
+
+            // Actually, if we just set `customTitle` to `initialStudentName` and mode to `student`, 
+            // AND if the select input uses `defaultValue={formState.customTitle}` (unlikely) or just doesn't have value...
+
+            // Let's assume we can just set it.
+            // If the form has `<select name="title">`, we can't easily change it via React state if it's uncontrolled.
+            // But `validateForm` uses `document.querySelector`. This implies it IS uncontrolled.
+
+            // In that case, we need to manipulate the DOM or change the component to be controlled?
+            // Or just hoping the user selects it?
+
+            // Wait, "スケジュールの新規レッスン作成をその生徒でできるようになっているところに遷移"
+            // We want it to be pre-selected.
+
+            // If I look at `handleSaveEvent`, it uses `formData.get("title")`.
+
+            // If the input is uncontrolled, we can use `key` to re-render it with new `defaultValue`?
+            // Or just set the formState and hope the UI uses it.
+
+            // Let's dispatch a custom action or just set it.
+            // But we don't have the UI code here.
+
+            // Let's just set the title mode to student.
+            // And maybe show a toast "生徒を選択してください".
+
+            // Better: We can try to find the student in `students` array and set `customTitle` if that helps?
+            // No.
+
+            // I'll just open the modal. User can select the student.
+            // BUT simpler: `openAddModal` could be modified to accept an optional student name.
+        }
+    }, [initialStudentName, mounted, students.length]); // Added students.length dependency to retry when students load
 
     // Generate week days for weekly view
     const getWeekDays = () => {

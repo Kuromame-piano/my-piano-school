@@ -47,9 +47,10 @@ type DetailTab = "active" | "completed" | "notes" | "progress" | "recital";
 
 interface StudentsViewProps {
     initialStudentId?: number | null;
+    initialTab?: "active" | "completed" | "notes" | "progress" | "recital";
 }
 
-export default function StudentsView({ initialStudentId }: StudentsViewProps = {}) {
+export default function StudentsView({ initialStudentId, initialTab }: StudentsViewProps = {}) {
     const [students, setStudents] = useState<Student[]>([]);
     const [loading, setLoading] = useState(true);
     const [showArchived, setShowArchived] = useState(false);
@@ -63,10 +64,10 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
             const student = students.find(s => s.id === initialStudentId);
             if (student) {
                 setSelectedStudent(student);
-                setActiveTab("active");
+                setActiveTab(initialTab || "active");
             }
         }
-    }, [initialStudentId, students]);
+    }, [initialStudentId, students, initialTab]);
 
     const loadStudents = async () => {
         setLoading(true);

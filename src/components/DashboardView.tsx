@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Wallet, Calendar, TrendingUp } from "lucide-react";
+import { Users, Wallet, Calendar, TrendingUp, ChevronLeft, ChevronRight, StickyNote, FileText, CalendarPlus } from "lucide-react";
 
 import { getStudents, Student } from "../actions/studentActions";
 import { getTransactions, getTuitionPayments, Transaction, TuitionPayment } from "../actions/financeActions";
@@ -9,8 +9,10 @@ import { getLessons, CalendarEvent } from "../actions/calendarActions";
 import { useEffect, useState } from "react";
 
 
+import { NavigationPayload } from "@/app/page";
+
 interface DashboardViewProps {
-    onViewChange: (view: "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital" | "library") => void;
+    onNavigate: (payload: NavigationPayload | "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital" | "library") => void;
 }
 
 interface TodayLesson {
@@ -41,7 +43,7 @@ interface BirthdayStudent {
     age: number;
 }
 
-export default function DashboardView({ onViewChange }: DashboardViewProps) {
+export default function DashboardView({ onNavigate }: DashboardViewProps) {
     const [stats, setStats] = useState({
         studentCount: 0,
         monthlyIncome: 0,
@@ -51,6 +53,8 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
     const [unpaidStudents, setUnpaidStudents] = useState<UnpaidStudent[]>([]);
     const [recentAchievements, setRecentAchievements] = useState<Achievement[]>([]);
     const [upcomingBirthdays, setUpcomingBirthdays] = useState<BirthdayStudent[]>([]);
+
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     useEffect(() => {
         const fetchData = async () => {
@@ -93,12 +97,31 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
             });
             setUnpaidStudents(unpaidList);
 
-            // 3. Today's Lessons
-            const todayStr = now.toISOString().split('T')[0];
-            const todayEvents = events.filter(e => e.start.startsWith(todayStr));
+            // 3. Lessons for Selected Date
+            // We use the already fetched events which cover 2 weeks range by default in getLessons.
+            // However, getLessons default might not cover if user navigates far.
+            // Ideally we should refetch events when date changes if it's outside range, but for now let's filter from what we have
+            // or fetch specifically for the date if we want to be robust. 
+            // The getLessons call in valid range is better.
 
-            setTodaysLessons(todayEvents.map(e => {
+            // Let's re-fetch specifically for the selected date to ensure we get them
+            const dateStr = selectedDate.toISOString().split('T')[0];
+
+            // Fetch lessons for the specific day (using 1 day range)
+            // We can just use the events we got if they cover it, but let's be safe and filter or refetch.
+            // Since `getLessons` without args defaults to now+14days, if we go back to yesterday it might be missing.
+            // So we should fetch based on selectedDate.
+
+            const startOfDay = new Date(selectedDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(selectedDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const dayEvents = await getLessons(startOfDay.toISOString(), endOfDay.toISOString());
+
+            setTodaysLessons(dayEvents.map(e => {
                 const matchingStudent = studentData.find(s => s.name === e.title);
+                // Also try to match by partial name if exact match fails, or rely on strict naming
                 return {
                     name: e.title,
                     piece: e.description || "練習曲",
@@ -153,13 +176,45 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
             setUpcomingBirthdays(birthdays);
         };
         fetchData();
-    }, []);
+    }, [selectedDate]);
 
     const statItems = [
         { label: "生徒数", value: stats.studentCount.toString(), icon: Users, color: "text-pink-400", sub: "人" },
         { label: "今月の収入", value: `¥${stats.monthlyIncome.toLocaleString()}`, icon: Wallet, color: "text-emerald-400", sub: "" },
         { label: "未納月謝", value: stats.unpaidCount.toString(), icon: Users, color: stats.unpaidCount > 0 ? "text-red-400" : "text-gray-400", sub: "人" },
     ];
+
+    const handlePrevDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() - 1);
+        setSelectedDate(newDate);
+    };
+
+    const handleNextDay = () => {
+        const newDate = new Date(selectedDate);
+        newDate.setDate(selectedDate.getDate() + 1);
+        setSelectedDate(newDate);
+    };
+
+    const handleToday = () => {
+        setSelectedDate(new Date());
+    };
+
+    // Helper to format date for header
+    const getFormattedDate = (date: Date) => {
+        const today = new Date();
+        const isToday = date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear();
+
+        return {
+            dateStr: date.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' }),
+            weekday: date.toLocaleDateString('ja-JP', { weekday: 'short' }),
+            isToday
+        };
+    };
+
+    const { dateStr, weekday, isToday } = getFormattedDate(selectedDate);
 
     return (
         <div className="space-y-6">
@@ -171,9 +226,9 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                 </div>
                 <div className="text-right hidden md:block">
                     <p className="text-4xl font-bold text-t-primary">
-                        {new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}
+                        {getFormattedDate(new Date()).dateStr}
                         <span className="text-lg text-t-secondary ml-2">
-                            ({new Date().toLocaleDateString('ja-JP', { weekday: 'short' })})
+                            ({getFormattedDate(new Date()).weekday})
                         </span>
                     </p>
                 </div>
@@ -205,12 +260,37 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                 <div className="lg:col-span-2 space-y-6">
                     <section className="glass-card h-full">
                         <div className="p-4 border-b border-card-border flex justify-between items-center">
-                            <h3 className="text-lg font-semibold flex items-center gap-2 text-t-primary">
-                                <Calendar className="w-5 h-5 text-accent" />
-                                今日のレッスン
-                            </h3>
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-semibold flex items-center gap-2 text-t-primary">
+                                    <Calendar className="w-5 h-5 text-accent" />
+                                    {isToday ? "今日のレッスン" : `${selectedDate.getMonth() + 1}/${selectedDate.getDate()}(${weekday})のレッスン`}
+                                </h3>
+                                {/* Navigation */}
+                                <div className="flex items-center bg-card-bg-hover rounded-lg p-1 gap-1">
+                                    <button
+                                        onClick={handlePrevDay}
+                                        className="w-8 h-8 flex items-center justify-center hover:bg-card-hover rounded-md text-t-secondary transition-colors"
+                                        title="前日"
+                                    >
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={handleToday}
+                                        className="px-3 h-8 text-sm font-medium hover:bg-card-hover rounded-md text-t-primary transition-colors"
+                                    >
+                                        今日
+                                    </button>
+                                    <button
+                                        onClick={handleNextDay}
+                                        className="w-8 h-8 flex items-center justify-center hover:bg-card-hover rounded-md text-t-secondary transition-colors"
+                                        title="翌日"
+                                    >
+                                        <ChevronRight className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
                             <button
-                                onClick={() => onViewChange("schedule")}
+                                onClick={() => onNavigate("schedule")}
                                 className="text-xs text-accent hover:underline"
                             >
                                 全て見る
@@ -220,32 +300,48 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                             {todaysLessons.length === 0 ? (
                                 <div className="p-8 text-center text-t-muted flex flex-col items-center gap-2">
                                     <Calendar className="w-8 h-8 opacity-20" />
-                                    <p>今日のレッスンはありません</p>
+                                    <p>レッスンはありません</p>
                                 </div>
                             ) : (
                                 todaysLessons.map((lesson, i) => (
-                                    <div key={i} className="p-4 flex items-center gap-4 hover:bg-card-bg-hover transition-colors">
+                                    <div key={i} className="p-4 flex items-center gap-4 hover:bg-card-bg-hover transition-colors group">
                                         <div className="flex flex-col items-center min-w-[60px]">
-                                            <span className="text-lg font-bold text-t-primary leading-none">
-                                                {lesson.time.split(':')[0]}
-                                            </span>
-                                            <span className="text-xs text-t-muted">
-                                                :{lesson.time.split(':')[1]}
+                                            <span className="text-xl font-semibold text-t-primary leading-none">
+                                                {lesson.time}
                                             </span>
                                         </div>
-                                        <div className={`w-10 h-10 rounded-full ${lesson.color} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
+                                        <div className={`w-10 h-10 rounded-full ${lesson.color} flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0`}>
                                             {lesson.name[0]}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-medium text-t-primary">{lesson.name}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-t-primary truncate">{lesson.name}</p>
                                             <p className="text-sm text-t-secondary truncate">{lesson.piece}</p>
                                         </div>
-                                        <button
-                                            className="px-3 py-1 text-xs bg-accent-bg text-accent rounded-full hover:bg-accent hover:text-white transition-colors"
-                                            onClick={() => onViewChange("schedule")} // Ideally simplify deep link to lesson note
-                                        >
-                                            記録
-                                        </button>
+
+                                        {/* Quick Actions */}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg tooltip-trigger transition-colors"
+                                                title="生徒ノート"
+                                                onClick={() => lesson.studentId && onNavigate({ view: "students", studentId: lesson.studentId, initialTab: "notes" })}
+                                            >
+                                                <StickyNote className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                                                title="レッスン報告"
+                                                onClick={() => lesson.studentId && onNavigate({ view: "reports", studentId: lesson.studentId })}
+                                            >
+                                                <FileText className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                className="p-2 text-accent hover:bg-accent/10 rounded-lg transition-colors"
+                                                title="次回予約"
+                                                onClick={() => onNavigate({ view: "schedule", scheduleStudentName: lesson.name })}
+                                            >
+                                                <CalendarPlus className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -268,7 +364,7 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                                 )}
                             </h3>
                             <button
-                                onClick={() => onViewChange("finance")}
+                                onClick={() => onNavigate("finance")}
                                 className="text-xs text-t-secondary hover:text-t-primary"
                             >
                                 管理
