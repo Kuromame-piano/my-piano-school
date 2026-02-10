@@ -1,6 +1,7 @@
 "use server";
 
 import { getCalendarClient } from "../lib/google";
+import { getCachedData, setCachedData, getLessonsCacheKey, invalidateLessonsCache } from "../lib/dataCache";
 
 export interface CalendarEvent {
     id: string;
@@ -15,8 +16,6 @@ const calendarId = process.env.CALENDAR_ID || 'primary';
 
 export async function getLessons(timeMin?: string, timeMax?: string): Promise<CalendarEvent[]> {
     try {
-        const calendar = await getCalendarClient();
-
         // Default to "now until 2 weeks" if no range provided
         let minDate = new Date();
         let maxDate = new Date();
@@ -25,20 +24,36 @@ export async function getLessons(timeMin?: string, timeMax?: string): Promise<Ca
         if (timeMin) minDate = new Date(timeMin);
         if (timeMax) maxDate = new Date(timeMax);
 
+        const minISO = minDate.toISOString();
+        const maxISO = maxDate.toISOString();
+
+        // Check cache first
+        const cacheKey = getLessonsCacheKey(minISO, maxISO);
+        const cached = getCachedData<CalendarEvent[]>(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        // Fetch from Google Calendar API
+        const calendar = await getCalendarClient();
+
         try {
             const response = await calendar.events.list({
                 calendarId: calendarId,
-                timeMin: minDate.toISOString(),
-                timeMax: maxDate.toISOString(),
+                timeMin: minISO,
+                timeMax: maxISO,
                 singleEvents: true,
                 orderBy: 'startTime',
                 maxResults: 100,
             });
 
             const events = response.data.items;
-            if (!events) return [];
+            if (!events) {
+                setCachedData(cacheKey, []);
+                return [];
+            }
 
-            return events.map(event => ({
+            const lessons = events.map(event => ({
                 id: event.id || "",
                 title: event.summary || "No Title",
                 start: event.start?.dateTime || event.start?.date || "",
@@ -46,6 +61,10 @@ export async function getLessons(timeMin?: string, timeMax?: string): Promise<Ca
                 location: event.location || "",
                 description: event.description || ""
             }));
+
+            // Cache the results
+            setCachedData(cacheKey, lessons);
+            return lessons;
         } catch (innerError: any) {
             console.error(`Failed to fetch events for '${calendarId}'. Status: ${innerError.code}`);
             throw innerError;
@@ -79,6 +98,9 @@ export async function createLesson(event: Omit<CalendarEvent, "id">) {
             },
         });
 
+        // Invalidate all lesson caches
+        invalidateLessonsCache();
+
         return { success: true, eventId: response.data.id };
     } catch (error: any) {
         console.error("Error creating calendar event:", error);
@@ -110,6 +132,9 @@ export async function updateLesson(event: CalendarEvent) {
             },
         });
 
+        // Invalidate all lesson caches
+        invalidateLessonsCache();
+
         return { success: true };
     } catch (error: any) {
         console.error("Error updating calendar event:", error);
@@ -127,6 +152,9 @@ export async function deleteLesson(eventId: string) {
             calendarId: calendarId,
             eventId: eventId,
         });
+
+        // Invalidate all lesson caches
+        invalidateLessonsCache();
 
         return { success: true };
     } catch (error: any) {

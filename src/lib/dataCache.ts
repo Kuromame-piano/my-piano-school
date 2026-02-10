@@ -40,4 +40,21 @@ export const CACHE_KEYS = {
     TEXTBOOKS: "textbooks",
     TEMPLATES: "templates",
     TRANSACTIONS: "transactions",
+    LESSONS: "lessons", // Base key for calendar events
 } as const;
+
+// Helper to generate date-specific cache keys for lessons
+export function getLessonsCacheKey(timeMin: string, timeMax: string): string {
+    const minDate = new Date(timeMin).toISOString().split('T')[0];
+    const maxDate = new Date(timeMax).toISOString().split('T')[0];
+    return `${CACHE_KEYS.LESSONS}_${minDate}_${maxDate}`;
+}
+
+// Helper to invalidate all lesson caches
+export function invalidateLessonsCache(): void {
+    Array.from(cache.keys()).forEach(key => {
+        if (key.startsWith(CACHE_KEYS.LESSONS)) {
+            cache.delete(key);
+        }
+    });
+}
