@@ -10,6 +10,7 @@ import {
     Mic2,
     BookOpen,
     X,
+    LogOut,
 } from "lucide-react";
 
 type View = "dashboard" | "students" | "finance" | "reports" | "schedule" | "recital" | "library";
@@ -106,6 +107,19 @@ export default function Sidebar({ activeView, onViewChange, isOpen = true, onClo
 
                 {/* Footer */}
                 <div className="pt-6 border-t border-card-border">
+                    <div className="mb-4 px-3 sm:px-4">
+                        <button
+                            onClick={() => {
+                                if (confirm("ログアウトしますか？")) {
+                                    import("@/actions/auth").then((mod) => mod.logout());
+                                }
+                            }}
+                            className="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl font-medium transition-all text-sm sm:text-base text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                            <LogOut className="w-5 h-5" />
+                            ログアウト
+                        </button>
+                    </div>
                     <p className="text-xs text-accent text-center">
                         Play On Music
                     </p>
