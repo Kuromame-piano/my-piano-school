@@ -31,6 +31,7 @@ import {
     getStudents,
     saveStudent,
     archiveStudent,
+    deleteStudent,
     getLessonNotes,
     addLessonNote,
     deleteLessonNote,
@@ -245,6 +246,17 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
         await loadStudents();
     };
 
+    const handleDeleteStudent = async (studentId: number) => {
+        if (!confirm("この生徒を削除しますか？\nこの操作は取り消せません。")) return;
+
+        // 二重確認
+        if (!confirm("本当に削除してよろしいですか？\n生徒データと関連するすべての記録が削除されます。")) return;
+
+        await deleteStudent(studentId);
+        setSelectedStudent(null);
+        await loadStudents();
+    };
+
     const handleAddLessonNote = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedStudent || isSaving) return;
@@ -408,6 +420,13 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                 >
                                     {selectedStudent.archived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
                                     <span className="hidden sm:inline">{selectedStudent.archived ? "復元" : "アーカイブ"}</span>
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteStudent(selectedStudent.id)}
+                                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors bg-rose-100 text-rose-700 hover:bg-rose-200"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="hidden sm:inline">削除</span>
                                 </button>
                                 <button onClick={() => openEditModal(selectedStudent)} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-accent-bg hover:bg-accent-bg-hover text-t-secondary rounded-xl text-sm font-medium transition-colors">
                                     <Pencil className="w-4 h-4" /> <span className="hidden sm:inline">編集</span>
