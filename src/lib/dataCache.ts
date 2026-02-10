@@ -11,11 +11,11 @@ interface CacheEntry<T> {
 }
 
 const cache: Map<string, CacheEntry<unknown>> = new Map();
-const CACHE_TTL = 30 * 1000; // 30 seconds
+const DEFAULT_TTL = 30 * 1000; // 30 seconds
 
-export function getCachedData<T>(key: string): T | null {
+export function getCachedData<T>(key: string, ttl: number = DEFAULT_TTL): T | null {
     const cached = cache.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    if (cached && Date.now() - cached.timestamp < ttl) {
         return cached.data as T;
     }
     return null;

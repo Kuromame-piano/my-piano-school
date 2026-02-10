@@ -325,31 +325,61 @@ export default function FinanceView() {
         if (isSaving) return; // 二重クリック防止
         setIsSaving(true);
 
+        // Snapshot for rollback
+        const previousTransactions = [...transactions];
+        const previousChartData = [...chartData]; // Chart data might be complex to optimistic update accurately without re-calc
+        // For now, we will just optimistic update the list. Chart will update on refresh.
+
+        const form = e.target as HTMLFormElement;
+        const formData = new FormData(form);
+
+        const newTx: Transaction = {
+            id: editingTransaction ? editingTransaction.id : Date.now(),
+            type: addType,
+            category: formData.get("category") as string,
+            description: formData.get("description") as string,
+            amount: parseInt(formData.get("amount") as string) || 0,
+            date: formData.get("date") as string || new Date().toLocaleDateString("ja-JP"),
+            studentName: addType === "income" ? (formData.get("studentName") as string) : undefined,
+        };
+
+        // Optimistic Update
+        if (editingTransaction) {
+            setTransactions(prev => prev.map(t => t.id === newTx.id ? newTx : t));
+        } else {
+            setTransactions(prev => [newTx, ...prev]);
+        }
+
+        // Close modal immediately
+        setIsAddModalOpen(false);
+        setEditingTransaction(null);
+
         try {
-            const form = e.target as HTMLFormElement;
-            const formData = new FormData(form);
-
-            const tx: Transaction = {
-                id: editingTransaction ? editingTransaction.id : Date.now(),
-                type: addType,
-                category: formData.get("category") as string,
-                description: formData.get("description") as string,
-                amount: parseInt(formData.get("amount") as string) || 0,
-                date: formData.get("date") as string || new Date().toLocaleDateString("ja-JP"),
-                studentName: addType === "income" ? (formData.get("studentName") as string) : undefined,
-            };
-
+            let result;
             if (editingTransaction) {
-                await updateTransaction(tx);
+                result = await updateTransaction(newTx);
             } else {
-                await addTransaction(tx);
+                result = await addTransaction(newTx);
             }
 
-            // Refresh data
-            const updatedTx = await getTransactionsByMonth(selectedYear, selectedMonth);
-            setTransactions(updatedTx);
-            setIsAddModalOpen(false);
-            setEditingTransaction(null);
+            if (!result.success) {
+                throw new Error(String(result.error));
+            }
+
+            // Background refresh to ensure consistency (especially for charts)
+            const [txData, summaryData] = await Promise.all([
+                getTransactionsByMonth(selectedYear, selectedMonth),
+                getMonthlySummary(6),
+            ]);
+            setTransactions(txData);
+            setChartData(summaryData);
+        } catch (error) {
+            console.error("Failed to save transaction:", error);
+            alert("保存に失敗しました。");
+            // Rollback
+            setTransactions(previousTransactions);
+            setIsAddModalOpen(true); // Re-open? Maybe difficult if state cleared.
+            // For now just rollback data is enough.
         } finally {
             setIsSaving(false);
         }
@@ -357,9 +387,32 @@ export default function FinanceView() {
 
     const handleDeleteTransaction = async (id: number) => {
         if (!confirm("この取引を削除してよろしいですか？")) return;
-        await deleteTransaction(id);
-        const updatedTx = await getTransactionsByMonth(selectedYear, selectedMonth);
-        setTransactions(updatedTx);
+
+        // Snapshot
+        const previousTransactions = [...transactions];
+
+        // Optimistic Update
+        setTransactions(prev => prev.filter(t => t.id !== id));
+
+        try {
+            const result = await deleteTransaction(id);
+            if (!result.success) {
+                throw new Error(String(result.error));
+            }
+
+            // Background refresh
+            const [txData, summaryData] = await Promise.all([
+                getTransactionsByMonth(selectedYear, selectedMonth),
+                getMonthlySummary(6),
+            ]);
+            setTransactions(txData);
+            setChartData(summaryData);
+        } catch (error) {
+            console.error("Failed to delete transaction:", error);
+            alert("削除に失敗しました。");
+            // Rollback
+            setTransactions(previousTransactions);
+        }
     };
 
     const handleEditTransaction = (tx: Transaction) => {
