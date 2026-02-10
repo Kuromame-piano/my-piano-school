@@ -467,7 +467,7 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                             ) : (
                                                 <div className="p-2 bg-emerald-500/10 rounded-lg"><Music className="w-5 h-5 text-emerald-400" /></div>
                                             )}
-                                            <div className="flex-1"><h4 className="font-medium text-emerald-100">{piece.title}</h4><p className="text-xs text-emerald-500/60">合格: {piece.completedAt}</p></div>
+                                            <div className="flex-1"><h4 className="font-medium text-emerald-700">{piece.title}</h4><p className="text-xs text-emerald-600">合格: {piece.completedAt}</p></div>
                                         </div>
                                     ))
                                 )

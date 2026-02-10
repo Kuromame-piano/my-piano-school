@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Calendar, MapPin, Music, Users, Pencil, Trash2, ChevronRight, GripVertical } from "lucide-react";
+import { Plus, X, Calendar, MapPin, Music, Users, Pencil, Trash2, ChevronRight, GripVertical, Check } from "lucide-react";
 import { DndContext, closestCenter, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,7 +9,27 @@ import { getRecitals, saveRecital, deleteRecital, Recital, RecitalParticipant } 
 import { getStudents, saveStudent, Student, RecitalRecord } from "../actions/studentActions";
 
 // Sortable Participant Component
-function SortableParticipant({ participant, index, onRemove }: { participant: RecitalParticipant; index: number; onRemove: (id: string | number) => void }) {
+function SortableParticipant({
+    participant,
+    index,
+    onRemove,
+    isEditing,
+    editValue,
+    onEditStart,
+    onEditChange,
+    onEditSave,
+    onEditCancel
+}: {
+    participant: RecitalParticipant;
+    index: number;
+    onRemove: (id: string | number) => void;
+    isEditing: boolean;
+    editValue: string;
+    onEditStart: (id: string | number, currentPiece: string) => void;
+    onEditChange: (val: string) => void;
+    onEditSave: () => void;
+    onEditCancel: () => void;
+}) {
     const uniqueId = participant.id || participant.studentId;
     if (!uniqueId) return null;
 
@@ -33,13 +53,41 @@ function SortableParticipant({ participant, index, onRemove }: { participant: Re
                     <p className="font-medium">{participant.studentName}</p>
                     {participant.isGuest && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">ゲスト</span>}
                 </div>
-                <p className="text-sm text-t-secondary flex items-center gap-1.5 mt-0.5">
-                    <Music className="w-3.5 h-3.5" />{participant.piece}
-                </p>
+                {isEditing ? (
+                    <div className="flex items-center gap-2 mt-1">
+                        <input
+                            type="text"
+                            value={editValue}
+                            onChange={(e) => onEditChange(e.target.value)}
+                            className="flex-1 px-2 py-1 text-sm bg-input-bg border border-input-border rounded-lg focus:border-input-border-focus"
+                            autoFocus
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") onEditSave();
+                                if (e.key === "Escape") onEditCancel();
+                            }}
+                        />
+                        <button onClick={onEditSave} className="p-1 text-emerald-500 hover:bg-emerald-500/10 rounded"><Check className="w-4 h-4" /></button>
+                        <button onClick={onEditCancel} className="p-1 text-rose-500 hover:bg-rose-500/10 rounded"><X className="w-4 h-4" /></button>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <p className="text-sm text-t-secondary flex items-center gap-1.5 mt-0.5">
+                            <Music className="w-3.5 h-3.5" />{participant.piece}
+                        </p>
+                        <button
+                            onClick={() => onEditStart(uniqueId, participant.piece)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-t-muted hover:text-accent transition-opacity"
+                        >
+                            <Pencil className="w-3 h-3" />
+                        </button>
+                    </div>
+                )}
             </div>
-            <button onClick={() => onRemove(uniqueId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
-                <Trash2 className="w-4 h-4 text-rose-400" />
-            </button>
+            {!isEditing && (
+                <button onClick={() => onRemove(uniqueId)} className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-rose-500/20 rounded-lg transition-opacity">
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                </button>
+            )}
         </div>
     );
 }
@@ -54,6 +102,10 @@ export default function RecitalView() {
     const [isAddParticipantModalOpen, setIsAddParticipantModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [useCustomName, setUseCustomName] = useState(false);
+
+    // Editing participant piece
+    const [editingParticipantId, setEditingParticipantId] = useState<string | number | null>(null);
+    const [editingPieceValue, setEditingPieceValue] = useState("");
 
     useEffect(() => {
         loadData();
@@ -176,6 +228,52 @@ export default function RecitalView() {
         }
     };
 
+    const handleSaveParticipantPiece = async () => {
+        if (!selectedRecital || !editingParticipantId || isSaving) return;
+        setIsSaving(true);
+
+        try {
+            const participantIndex = selectedRecital.participants.findIndex(p => (p.id || p.studentId) === editingParticipantId);
+            if (participantIndex === -1) return;
+
+            const participant = selectedRecital.participants[participantIndex];
+            const updatedParticipant = { ...participant, piece: editingPieceValue };
+
+            // If it's a registered student, update their recital history too
+            if (!participant.isGuest && participant.studentId && participant.studentRecitalRecordId) {
+                const student = students.find(s => s.id === participant.studentId);
+                if (student) {
+                    const updatedHistory = (student.recitalHistory || []).map(record =>
+                        record.id === participant.studentRecitalRecordId
+                            ? { ...record, piece: editingPieceValue }
+                            : record
+                    );
+
+                    await saveStudent({
+                        ...student,
+                        recitalHistory: updatedHistory
+                    });
+                }
+            }
+
+            const updatedParticipants = [...selectedRecital.participants];
+            updatedParticipants[participantIndex] = updatedParticipant;
+
+            const updatedRecital = {
+                ...selectedRecital,
+                participants: updatedParticipants
+            };
+
+            await saveRecital(updatedRecital);
+            setSelectedRecital(updatedRecital);
+            await loadData();
+            setEditingParticipantId(null);
+            setEditingPieceValue("");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleRemoveParticipant = async (id: string | number) => {
         if (!selectedRecital) return;
         if (!confirm("この参加者を削除しますか？")) return;
@@ -279,7 +377,7 @@ export default function RecitalView() {
                     <div className="relative z-10 w-full max-w-2xl bg-modal-bg border border-modal-border rounded-3xl p-8 max-h-[90vh] overflow-y-auto shadow-xl">
                         <button onClick={() => setSelectedRecital(null)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
 
-                        <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-start justify-between mb-6 pr-12">
                             <div>
                                 <h3 className="text-2xl font-bold">{selectedRecital.name}</h3>
                                 <p className="text-accent mt-1 flex items-center gap-2">
@@ -320,6 +418,18 @@ export default function RecitalView() {
                                                     participant={participant}
                                                     index={index}
                                                     onRemove={handleRemoveParticipant}
+                                                    isEditing={editingParticipantId === (participant.id || participant.studentId)}
+                                                    editValue={editingPieceValue}
+                                                    onEditStart={(id, piece) => {
+                                                        setEditingParticipantId(id);
+                                                        setEditingPieceValue(piece);
+                                                    }}
+                                                    onEditChange={setEditingPieceValue}
+                                                    onEditSave={handleSaveParticipantPiece}
+                                                    onEditCancel={() => {
+                                                        setEditingParticipantId(null);
+                                                        setEditingPieceValue("");
+                                                    }}
                                                 />
                                             ))}
                                         </SortableContext>
