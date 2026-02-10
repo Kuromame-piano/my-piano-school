@@ -33,6 +33,9 @@ export default function LoginPage() {
                                     name="password"
                                     type="password"
                                     required
+                                    autoComplete="current-password"
+                                    pattern="[A-Za-z0-9!@#$%^&*()_+\-=\[\]{};':\\\|,.<>/?]*"
+                                    title="半角英数字で入力してください"
                                     className="block w-full pl-10 pr-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
                                     placeholder="パスワードを入力"
                                 />
