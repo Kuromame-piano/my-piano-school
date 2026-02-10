@@ -1,14 +1,370 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useReducer } from "react";
 import { Calendar, MapPin, ChevronLeft, ChevronRight, X, Clock, AlignLeft, Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
 
 import { getLessons, createLesson, updateLesson, deleteLesson, CalendarEvent } from "../actions/calendarActions";
 import { getStudents, Student } from "../actions/studentActions";
+import { useToast } from "@/contexts/ToastContext";
 
 type ViewMode = "month" | "week" | "summary";
 
+// Form state management with useReducer
+type LessonFormState = {
+    titleMode: "student" | "trial" | "other";
+    customTitle: string;
+    lessonDuration: number;
+    customDuration: number | "";
+    showCustomDuration: boolean;
+    lessonDate: string;
+    startTime: string;
+    endTime: string;
+    saving: boolean;
+    showMemo: boolean;
+};
+
+type LessonFormAction =
+    | { type: "SET_TITLE_MODE"; mode: "student" | "trial" | "other" }
+    | { type: "SET_CUSTOM_TITLE"; title: string }
+    | { type: "SET_DURATION"; duration: number }
+    | { type: "SET_CUSTOM_DURATION"; duration: number | "" }
+    | { type: "SET_LESSON_DATE"; date: string }
+    | { type: "SET_START_TIME"; time: string }
+    | { type: "SET_END_TIME"; time: string }
+    | { type: "TOGGLE_CUSTOM_DURATION"; show: boolean }
+    | { type: "TOGGLE_MEMO"; show: boolean }
+    | { type: "SET_SAVING"; saving: boolean }
+    | { type: "RESET_FORM"; defaults?: Partial<LessonFormState> }
+    | { type: "LOAD_EVENT"; event: CalendarEvent; students: Student[] };
+
+const initialFormState: LessonFormState = {
+    titleMode: "student",
+    customTitle: "",
+    lessonDuration: 45,
+    customDuration: "",
+    showCustomDuration: false,
+    lessonDate: "",
+    startTime: "",
+    endTime: "",
+    saving: false,
+    showMemo: false,
+};
+
+function formatTimeFromDate(date: Date): string {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function calculateEndTime(startTime: string, duration: number): string {
+    if (!startTime) return "";
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    date.setMinutes(date.getMinutes() + duration);
+    return formatTimeFromDate(date);
+}
+
+
+// Custom Time Picker Component
+const CustomTimePicker = ({ value, onChange, className = "" }: { value: string; onChange: (value: string) => void; className?: string }) => {
+    // Determine initial values, default to empty if not set
+    const [hStr, mStr] = value ? value.split(":") : ["", ""];
+
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    const baseMinutes = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, ..., 55
+
+    // Ensure the current minute value is available in options (e.g. for calculated end times like 09:43)
+    const currentMinuteVal = mStr ? parseInt(mStr, 10) : NaN;
+    const minutes = [...baseMinutes];
+    if (!isNaN(currentMinuteVal) && !baseMinutes.includes(currentMinuteVal)) {
+        minutes.push(currentMinuteVal);
+        minutes.sort((a, b) => a - b);
+    }
+
+    const handleHourChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newHour = e.target.value;
+        const currentMinute = mStr || "00";
+        onChange(`${newHour}:${currentMinute}`);
+    };
+
+    const handleMinuteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newMinute = e.target.value;
+        const currentHour = hStr || "09"; // Default hour if not set
+        onChange(`${currentHour}:${newMinute}`);
+    };
+
+    return (
+        <div className={`flex gap-1 ${className}`}>
+            <div className="relative flex-1">
+                <select
+                    value={hStr}
+                    onChange={handleHourChange}
+                    className="w-full appearance-none px-1 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus text-center text-lg font-mono"
+                >
+                    <option value="" disabled>--</option>
+                    {hours.map((h) => (
+                        <option key={h} value={String(h).padStart(2, "0")}>
+                            {String(h).padStart(2, "0")}
+                        </option>
+                    ))}
+                </select>
+            </div>
+            <div className="flex items-center text-lg text-t-muted">:</div>
+            <div className="relative flex-1">
+                <select
+                    value={mStr}
+                    onChange={handleMinuteChange}
+                    className="w-full appearance-none px-1 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus text-center text-lg font-mono"
+                >
+                    <option value="" disabled>--</option>
+                    {minutes.map((m) => (
+                        <option key={m} value={String(m).padStart(2, "0")}>
+                            {String(m).padStart(2, "0")}
+                        </option>
+                    ))}
+                </select>
+            </div>
+        </div>
+    );
+};
+
+// Custom Date Picker Component
+const CustomDatePicker = ({ value, onChange }: { value: string; onChange: (value: string) => void }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    // Initialize viewDate from value or today
+    const [viewDate, setViewDate] = useState(() => value ? new Date(value) : new Date());
+
+    useEffect(() => {
+        if (isOpen && value) {
+            setViewDate(new Date(value));
+        }
+    }, [isOpen, value]);
+
+    const getDaysInMonth = (year: number, month: number) => {
+        const date = new Date(year, month, 1);
+        const days = [];
+
+        // Previous month days
+        const firstDay = date.getDay(); // 0 = Sunday
+        const prevMonth = new Date(year, month, 0);
+        for (let i = firstDay - 1; i >= 0; i--) {
+            days.push({
+                date: new Date(year, month - 1, prevMonth.getDate() - i),
+                currentMonth: false
+            });
+        }
+
+        // Current month days
+        const lastDay = new Date(year, month + 1, 0);
+        for (let i = 1; i <= lastDay.getDate(); i++) {
+            days.push({
+                date: new Date(year, month, i),
+                currentMonth: true
+            });
+        }
+
+        // Next month days
+        const remaining = 42 - days.length; // Ensure 6 rows for consistency
+        for (let i = 1; i <= remaining; i++) {
+            days.push({
+                date: new Date(year, month + 1, i),
+                currentMonth: false
+            });
+        }
+        return days;
+    };
+
+    const handleDateClick = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        onChange(`${year}-${month}-${day}`);
+        setIsOpen(false);
+    };
+
+    const days = getDaysInMonth(viewDate.getFullYear(), viewDate.getMonth());
+    const weekDays = ["日", "月", "火", "水", "木", "金", "土"];
+
+    return (
+        <div className="w-full">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus text-lg text-left"
+            >
+                <span className={!value ? "text-t-muted" : ""}>
+                    {value ? new Date(value).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" }) : "日付を選択"}
+                </span>
+                <CalendarDays className="w-5 h-5 text-t-muted" />
+            </button>
+
+            {isOpen && (
+                <div className="mt-2 w-full bg-card shadow-lg border border-card-border rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center justify-between mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))}
+                            className="p-1 hover:bg-bg-secondary rounded-full"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <span className="font-bold text-lg">
+                            {viewDate.getFullYear()}年 {viewDate.getMonth() + 1}月
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))}
+                            className="p-1 hover:bg-bg-secondary rounded-full"
+                        >
+                            <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                        {weekDays.map((d, i) => (
+                            <div key={i} className={`text-xs font-bold ${i === 0 ? "text-danger" : i === 6 ? "text-accent" : "text-t-muted"}`}>
+                                {d}
+                            </div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                        {days.map((day, i) => {
+                            const isSelected = value && day.date.toDateString() === new Date(value).toDateString();
+                            const isToday = day.date.toDateString() === new Date().toDateString();
+                            return (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => handleDateClick(day.date)}
+                                    className={`
+                                        h-10 w-full rounded-lg text-sm font-medium transition-colors
+                                        ${day.currentMonth ? "text-t-primary" : "text-t-muted opacity-50"}
+                                        ${isSelected ? "bg-accent text-white shadow-md" : isToday ? "bg-accent-bg text-accent" : "hover:bg-bg-secondary"}
+                                    `}
+                                >
+                                    {day.date.getDate()}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+function lessonFormReducer(state: LessonFormState, action: LessonFormAction): LessonFormState {
+    switch (action.type) {
+        case "SET_TITLE_MODE":
+            return { ...state, titleMode: action.mode, customTitle: "" };
+
+        case "SET_CUSTOM_TITLE":
+            return { ...state, customTitle: action.title };
+
+        case "SET_DURATION": {
+            const newState = { ...state, lessonDuration: action.duration };
+            // Auto-calculate end time if start time is set
+            if (state.startTime) {
+                newState.endTime = calculateEndTime(state.startTime, action.duration);
+            }
+            return newState;
+        }
+
+        case "SET_CUSTOM_DURATION": {
+            const newState = { ...state, customDuration: action.duration };
+            // If valid number, update lessonDuration and auto-calculate end time
+            if (typeof action.duration === "number" && action.duration > 0) {
+                newState.lessonDuration = action.duration;
+                if (state.startTime) {
+                    newState.endTime = calculateEndTime(state.startTime, action.duration);
+                }
+            }
+            return newState;
+        }
+
+        case "SET_LESSON_DATE":
+            return { ...state, lessonDate: action.date };
+
+        case "SET_START_TIME": {
+            const newState = { ...state, startTime: action.time };
+            // Auto-calculate end time based on duration
+            if (action.time) {
+                newState.endTime = calculateEndTime(action.time, state.lessonDuration);
+            }
+            return newState;
+        }
+
+        case "SET_END_TIME":
+            return { ...state, endTime: action.time };
+
+        case "TOGGLE_CUSTOM_DURATION":
+            return {
+                ...state,
+                showCustomDuration: action.show,
+                customDuration: action.show ? state.customDuration : "",
+            };
+
+        case "TOGGLE_MEMO":
+            return { ...state, showMemo: action.show };
+
+        case "SET_SAVING":
+            return { ...state, saving: action.saving };
+
+        case "RESET_FORM":
+            return { ...initialFormState, ...action.defaults };
+
+        case "LOAD_EVENT": {
+            const { event, students } = action;
+            const startDate = new Date(event.start);
+            const endDate = new Date(event.end);
+
+            const eventDuration = Math.round(
+                (endDate.getTime() - startDate.getTime()) / 60000
+            );
+            const standardDurations = [30, 45, 60, 90];
+            const isCustomDuration = !standardDurations.includes(eventDuration);
+
+            // Determine title mode
+            let titleMode: "student" | "trial" | "other" = "student";
+            let customTitle = "";
+
+            if (event.title === "体験レッスン") {
+                titleMode = "trial";
+            } else if (students.some((s) => s.name === event.title)) {
+                titleMode = "student";
+            } else {
+                titleMode = "other";
+                customTitle = event.title;
+            }
+
+            const year = startDate.getFullYear();
+            const month = String(startDate.getMonth() + 1).padStart(2, '0');
+            const day = String(startDate.getDate()).padStart(2, '0');
+            const lessonDate = `${year}-${month}-${day}`;
+
+            return {
+                titleMode,
+                customTitle,
+                lessonDuration: eventDuration,
+                customDuration: isCustomDuration ? eventDuration : "",
+                showCustomDuration: isCustomDuration,
+                lessonDate,
+                startTime: formatTimeFromDate(startDate),
+                endTime: formatTimeFromDate(endDate),
+                saving: false,
+                showMemo: !!event.description, // Open memo if description exists
+            };
+        }
+
+        default:
+            return state;
+    }
+}
+
+
+
 export default function ScheduleView() {
+    const toast = useToast();
     const [mounted, setMounted] = useState(false);
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
@@ -17,15 +373,18 @@ export default function ScheduleView() {
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
-    const [saving, setSaving] = useState(false);
-    const [lessonDuration, setLessonDuration] = useState(45);
-    const [startTime, setStartTime] = useState("");
-    const [endTime, setEndTime] = useState("");
     const [miniCalendarDate, setMiniCalendarDate] = useState(new Date());
-    const [customDuration, setCustomDuration] = useState<number | "">("");
-    const [showCustomDuration, setShowCustomDuration] = useState(false);
-    const [titleMode, setTitleMode] = useState<"student" | "trial" | "other">("student");
-    const [customTitle, setCustomTitle] = useState("");
+
+    // Consolidated form state with useReducer
+    const [formState, dispatch] = useReducer(lessonFormReducer, initialFormState);
+
+    // Form validation errors
+    const [formErrors, setFormErrors] = useState<{
+        title?: string;
+        startTime?: string;
+        endTime?: string;
+        customDuration?: string;
+    }>({});
 
     const fetchEvents = async () => {
         const year = currentDate.getFullYear();
@@ -139,140 +498,236 @@ export default function ScheduleView() {
         return `${monday.getMonth() + 1}/${monday.getDate()} 〜 ${sunday.getMonth() + 1}/${sunday.getDate()}`;
     };
 
+    // Validation function
+    const validateForm = (showToast: boolean = false): boolean => {
+        const errors: typeof formErrors = {};
+
+        // Validate title based on mode
+        if (formState.titleMode === "student") {
+            const form = document.querySelector("form");
+            const titleInput = form?.querySelector('input[name="title"]') as HTMLInputElement;
+            if (!titleInput?.value?.trim()) {
+                errors.title = "生徒名を選択してください";
+            }
+        } else if (formState.titleMode === "other" && !formState.customTitle.trim()) {
+            errors.title = "タイトルを入力してください";
+        }
+
+        // Validate date and time
+        if (!formState.lessonDate) {
+            errors.startTime = "レッスン日を入力してください";
+        }
+
+        if (!formState.startTime) {
+            errors.startTime = "開始時刻を入力してください";
+        }
+
+        if (!formState.endTime) {
+            errors.endTime = "終了時刻を入力してください";
+        } else if (formState.lessonDate && formState.startTime && formState.endTime) {
+            const startDateTime = new Date(`${formState.lessonDate}T${formState.startTime}`);
+            const endDateTime = new Date(`${formState.lessonDate}T${formState.endTime}`);
+
+            if (endDateTime <= startDateTime) {
+                errors.endTime = "終了時刻は開始時刻より後に設定してください";
+            }
+        }
+
+        // Validate custom duration
+        if (formState.showCustomDuration) {
+            if (!formState.customDuration) {
+                errors.customDuration = "カスタム時間を入力してください";
+            } else if (
+                typeof formState.customDuration === "number" &&
+                (formState.customDuration < 1 || formState.customDuration > 300)
+            ) {
+                errors.customDuration = "カスタム時間は1〜300分の間で入力してください";
+            }
+        }
+
+        setFormErrors(errors);
+
+        // Show toast for validation errors if requested
+        if (showToast && Object.keys(errors).length > 0) {
+            toast.error("入力内容に誤りがあります");
+        }
+
+        return Object.keys(errors).length === 0;
+    };
+
     const handleSaveEvent = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setSaving(true);
+
+        // Validate form before submission
+        if (!validateForm(true)) {
+            return;
+        }
+
+        dispatch({ type: "SET_SAVING", saving: true });
+
         const form = e.target as HTMLFormElement;
         const formData = new FormData(form);
 
+        // Construct start and end dates from separate fields
+        const startDateTime = new Date(`${formState.lessonDate}T${formState.startTime}`);
+        const endDateTime = new Date(`${formState.lessonDate}T${formState.endTime}`);
+
+        // Handle smart location default
+        const location = formData.get("location") as string;
+        if (location && typeof window !== "undefined") {
+            localStorage.setItem("lastLessonLocation", location);
+        }
+
         const eventData = {
             title: formData.get("title") as string,
-            start: new Date(formData.get("start") as string).toISOString(),
-            end: new Date(formData.get("end") as string).toISOString(),
-            location: formData.get("location") as string,
+            start: startDateTime.toISOString(),
+            end: endDateTime.toISOString(),
+            location: location,
             description: formData.get("description") as string,
         };
 
-        if (editingEvent) {
-            await updateLesson({ id: editingEvent.id, ...eventData });
+        // Optimistic update: add event to UI immediately
+        let optimisticEvent: CalendarEvent | null = null;
+        const previousEvents = [...events];
+
+        if (!editingEvent) {
+            // Creating new event - add temporary event with placeholder ID
+            optimisticEvent = {
+                id: `temp-${Date.now()}`,
+                ...eventData,
+            };
+            setEvents([...events, optimisticEvent]);
         } else {
-            await createLesson(eventData);
+            // Updating existing event - update in place
+            setEvents(events.map(e =>
+                e.id === editingEvent.id ? { ...e, ...eventData } : e
+            ));
         }
 
-        await fetchEvents();
-        setIsAddModalOpen(false);
-        setEditingEvent(null);
-        setSelectedEvent(null);
-        setSaving(false);
+        try {
+            let result;
+            if (editingEvent) {
+                result = await updateLesson({ id: editingEvent.id, ...eventData });
+            } else {
+                result = await createLesson(eventData);
+            }
+
+            if (result.success) {
+                toast.success(editingEvent ? "レッスンを更新しました" : "レッスンを作成しました");
+
+                // Save last used duration to localStorage for smart defaults
+                if (typeof window !== "undefined") {
+                    localStorage.setItem("lastLessonDuration", formState.lessonDuration.toString());
+                }
+
+                // Fetch fresh data from server to get real IDs and any server-side changes
+                await fetchEvents();
+
+                setIsAddModalOpen(false);
+                setEditingEvent(null);
+                setSelectedEvent(null);
+                setFormErrors({});
+                dispatch({ type: "RESET_FORM" });
+            } else {
+                throw new Error(result.error as string);
+            }
+        } catch (error: any) {
+            console.error("Failed to save lesson:", error);
+
+            // Rollback optimistic update on error
+            setEvents(previousEvents);
+
+            const errorMessage = error?.message || (editingEvent
+                ? "レッスンの更新に失敗しました"
+                : "レッスンの作成に失敗しました");
+            toast.error(errorMessage);
+        } finally {
+            dispatch({ type: "SET_SAVING", saving: false });
+        }
     };
 
     const handleDeleteEvent = async (eventId: string) => {
         if (!confirm("このレッスンを削除しますか？")) return;
-        await deleteLesson(eventId);
-        await fetchEvents();
-        setSelectedEvent(null);
+
+        try {
+            const result = await deleteLesson(eventId);
+
+            if (result.success) {
+                toast.success("レッスンを削除しました");
+                await fetchEvents();
+                setSelectedEvent(null);
+            } else {
+                throw new Error(result.error as string);
+            }
+        } catch (error: any) {
+            console.error("Failed to delete lesson:", error);
+            const errorMessage = error?.message || "レッスンの削除に失敗しました";
+            toast.error(errorMessage);
+        }
     };
 
     const openEditModal = (event: CalendarEvent) => {
         setEditingEvent(event);
-        setStartTime(formatDateForInput(event.start));
-        setEndTime(formatDateForInput(event.end));
-
-        // Determine title mode from existing event
-        if (event.title === "体験レッスン") {
-            setTitleMode("trial");
-            setCustomTitle("");
-        } else if (students.some(s => s.name === event.title)) {
-            setTitleMode("student");
-            setCustomTitle("");
-        } else {
-            setTitleMode("other");
-            setCustomTitle(event.title);
-        }
-
-        // Determine duration mode from existing event
-        const eventDuration = Math.round((new Date(event.end).getTime() - new Date(event.start).getTime()) / 60000);
-        const standardDurations = [30, 45, 60, 90];
-
-        if (standardDurations.includes(eventDuration)) {
-            setShowCustomDuration(false);
-            setCustomDuration("");
-            setLessonDuration(eventDuration);
-        } else {
-            setShowCustomDuration(true);
-            setCustomDuration(eventDuration);
-            setLessonDuration(eventDuration);
-        }
-
+        dispatch({ type: "LOAD_EVENT", event, students });
         setIsAddModalOpen(true);
         setSelectedEvent(null);
     };
 
-    const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newStart = e.target.value;
-        setStartTime(newStart);
-        if (newStart) {
-            const startDate = new Date(newStart);
-            const endDate = new Date(startDate.getTime() + lessonDuration * 60000);
-            setEndTime(endDate.toISOString().slice(0, 16));
-        }
-    };
 
-    const handleDurationSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
 
-        if (value === "custom") {
-            setShowCustomDuration(true);
-            // Don't update lessonDuration yet, wait for custom input
-        } else {
-            setShowCustomDuration(false);
-            const newDuration = parseInt(value);
-            setLessonDuration(newDuration);
-            setCustomDuration(""); // Clear custom input
 
-            // Auto-calculate end time
-            if (startTime) {
-                const startDate = new Date(startTime);
-                const endDate = new Date(startDate.getTime() + newDuration * 60000);
-                setEndTime(endDate.toISOString().slice(0, 16));
-            }
-        }
-    };
 
     const handleCustomDurationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         const numValue = value === "" ? "" : parseInt(value);
-        setCustomDuration(numValue);
-
-        // If valid number, update lessonDuration and auto-calculate end time
-        if (typeof numValue === "number" && numValue > 0) {
-            setLessonDuration(numValue);
-
-            if (startTime) {
-                const startDate = new Date(startTime);
-                const endDate = new Date(startDate.getTime() + numValue * 60000);
-                setEndTime(endDate.toISOString().slice(0, 16));
-            }
-        }
+        dispatch({ type: "SET_CUSTOM_DURATION", duration: numValue });
     };
 
     const openAddModal = () => {
         setEditingEvent(null);
 
-        // Reset title mode
-        setTitleMode("student");
-        setCustomTitle("");
-
-        // Reset duration mode
-        setShowCustomDuration(false);
-        setCustomDuration("");
-
-        // Set default times
-        setStartTime(formatDateForInput());
+        // Smart defaults based on current view and time
         const now = new Date();
-        now.setMinutes(0);
-        const endDate = new Date(now.getTime() + lessonDuration * 60000);
-        setEndTime(endDate.toISOString().slice(0, 16));
+
+        // Round to next hour
+        const nextHour = new Date(now);
+        if (nextHour.getMinutes() > 0) {
+            nextHour.setHours(nextHour.getHours() + 1);
+        }
+        nextHour.setMinutes(0);
+        nextHour.setSeconds(0);
+
+        // Date string YYYY-MM-DD
+        const year = nextHour.getFullYear();
+        const month = String(nextHour.getMonth() + 1).padStart(2, '0');
+        const day = String(nextHour.getDate()).padStart(2, '0');
+        const lessonDate = `${year}-${month}-${day}`;
+
+        // Time string HH:mm
+        const hours = String(nextHour.getHours()).padStart(2, '0');
+        const minutes = String(nextHour.getMinutes()).padStart(2, '0');
+        const startTime = `${hours}:${minutes}`;
+
+        // Get last used duration
+        const lastDuration = typeof window !== "undefined"
+            ? parseInt(localStorage.getItem("lastLessonDuration") || "45")
+            : 45;
+
+        // Calculate end time
+        const end = new Date(nextHour.getTime() + lastDuration * 60000);
+        const endHours = String(end.getHours()).padStart(2, '0');
+        const endMinutes = String(end.getMinutes()).padStart(2, '0');
+        const endTime = `${endHours}:${endMinutes}`;
+
+        dispatch({
+            type: "RESET_FORM",
+            defaults: {
+                lessonDate,
+                startTime,
+                endTime,
+                lessonDuration: lastDuration,
+            },
+        });
 
         setIsAddModalOpen(true);
     };
@@ -663,144 +1118,240 @@ export default function ScheduleView() {
             {/* Add/Edit Event Modal */}
             {
                 isAddModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
                         <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
-                        <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
-                            <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
+                        <div className="relative z-10 w-full sm:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto safe-area-bottom">
+                            <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary z-20"><X className="w-6 h-6" /></button>
                             <h3 className="text-2xl font-bold text-gradient mb-6">{editingEvent ? "レッスンを編集" : "新規レッスン"}</h3>
-                            <form onSubmit={handleSaveEvent} className="space-y-5">
-                                <div>
-                                    <label className="block text-sm font-medium text-t-secondary mb-2">レッスン種別 <span className="text-danger">*</span></label>
+                            <form onSubmit={handleSaveEvent} className={`space-y-6 transition-opacity ${formState.saving ? "opacity-50" : "opacity-100"}`}>
 
-                                    {/* Three-button toggle group */}
-                                    <div className="flex gap-2 mb-3 p-1 bg-card-solid rounded-xl border border-card-border">
-                                        <button
-                                            type="button"
-                                            onClick={() => setTitleMode("student")}
-                                            className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${titleMode === "student"
-                                                    ? "bg-accent-bg text-accent"
+                                {/* Section 1: Basic Info */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">レッスン種別 <span className="text-danger">*</span></label>
+                                        <div className="flex gap-2 p-1 bg-card-solid rounded-xl border border-card-border">
+                                            <button
+                                                type="button"
+                                                disabled={formState.saving}
+                                                onClick={() => dispatch({ type: "SET_TITLE_MODE", mode: "student" })}
+                                                className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${formState.titleMode === "student"
+                                                    ? "bg-accent-bg text-accent shadow-sm"
                                                     : "text-t-secondary hover:bg-accent-bg-hover"
-                                                }`}
-                                        >
-                                            生徒名
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setTitleMode("trial")}
-                                            className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${titleMode === "trial"
-                                                    ? "bg-accent-bg text-accent"
+                                                    }`}
+                                            >
+                                                生徒名
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={formState.saving}
+                                                onClick={() => dispatch({ type: "SET_TITLE_MODE", mode: "trial" })}
+                                                className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${formState.titleMode === "trial"
+                                                    ? "bg-accent-bg text-accent shadow-sm"
                                                     : "text-t-secondary hover:bg-accent-bg-hover"
-                                                }`}
-                                        >
-                                            体験レッスン
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setTitleMode("other")}
-                                            className={`flex-1 py-2.5 rounded-lg font-medium transition-colors ${titleMode === "other"
-                                                    ? "bg-accent-bg text-accent"
+                                                    }`}
+                                            >
+                                                体験レッスン
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={formState.saving}
+                                                onClick={() => dispatch({ type: "SET_TITLE_MODE", mode: "other" })}
+                                                className={`flex-1 py-2 rounded-lg font-medium text-sm transition-colors ${formState.titleMode === "other"
+                                                    ? "bg-accent-bg text-accent shadow-sm"
                                                     : "text-t-secondary hover:bg-accent-bg-hover"
-                                                }`}
-                                        >
-                                            その他
-                                        </button>
+                                                    }`}
+                                            >
+                                                その他
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {/* Conditional input based on titleMode */}
-                                    {titleMode === "student" && (
+                                    {formState.titleMode === "student" && (
                                         <div>
                                             <label className="block text-sm font-medium text-t-secondary mb-2">生徒名 <span className="text-danger">*</span></label>
-                                            <input
-                                                name="title"
-                                                list="student-names"
-                                                required
-                                                defaultValue={editingEvent?.title}
-                                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
-                                                placeholder="例: 山田花子"
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    id="student-name-input"
+                                                    name="title"
+                                                    list="student-names"
+                                                    required
+                                                    disabled={formState.saving}
+                                                    defaultValue={editingEvent?.title}
+                                                    onBlur={() => validateForm(false)}
+                                                    className="w-full px-4 py-3 pr-10 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed"
+                                                    placeholder="例: 山田花子"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    tabIndex={-1}
+                                                    onClick={() => {
+                                                        const input = document.getElementById('student-name-input') as HTMLInputElement;
+                                                        if (input) { input.value = ''; input.focus(); }
+                                                    }}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-t-muted hover:text-t-primary transition-colors"
+                                                    aria-label="入力をクリア"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                             <datalist id="student-names">
-                                                {students.map(s => <option key={s.id} value={s.name} />)}
+                                                {students
+                                                    .filter(s => !s.archived)
+                                                    .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+                                                    .map(s => <option key={s.id} value={s.name} />)}
                                             </datalist>
+                                            {formErrors.title && (
+                                                <p className="text-danger text-sm mt-1">{formErrors.title}</p>
+                                            )}
                                         </div>
                                     )}
 
-                                    {titleMode === "trial" && (
-                                        <input
-                                            type="hidden"
-                                            name="title"
-                                            value="体験レッスン"
-                                        />
+                                    {formState.titleMode === "trial" && (
+                                        <input type="hidden" name="title" value="体験レッスン" />
                                     )}
 
-                                    {titleMode === "other" && (
+                                    {formState.titleMode === "other" && (
                                         <div>
                                             <label className="block text-sm font-medium text-t-secondary mb-2">タイトル <span className="text-danger">*</span></label>
                                             <input
                                                 name="title"
                                                 required
-                                                value={customTitle}
-                                                onChange={(e) => setCustomTitle(e.target.value)}
-                                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
-                                                placeholder="例: 保護者面談、発表会準備など"
+                                                disabled={formState.saving}
+                                                value={formState.customTitle}
+                                                onChange={(e) => dispatch({ type: "SET_CUSTOM_TITLE", title: e.target.value })}
+                                                onBlur={() => validateForm(false)}
+                                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed"
+                                                placeholder="例: 保護者面談"
                                             />
+                                            {formErrors.title && (
+                                                <p className="text-danger text-sm mt-1">{formErrors.title}</p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-t-secondary mb-2">レッスン時間</label>
-                                    <select
-                                        value={showCustomDuration ? "custom" : lessonDuration}
-                                        onChange={handleDurationSelectChange}
-                                        className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
-                                    >
-                                        <option value={30}>30分</option>
-                                        <option value={45}>45分</option>
-                                        <option value={60}>60分</option>
-                                        <option value={90}>90分</option>
-                                        <option value="custom">その他（カスタム）</option>
-                                    </select>
 
-                                    {/* Conditional custom duration input */}
-                                    {showCustomDuration && (
-                                        <div className="mt-3">
-                                            <label className="block text-sm font-medium text-t-secondary mb-2">
-                                                カスタム時間（分） <span className="text-danger">*</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="300"
-                                                required={showCustomDuration}
-                                                value={customDuration}
-                                                onChange={handleCustomDurationChange}
-                                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
-                                                placeholder="例: 75"
-                                            />
-                                            <p className="text-xs text-t-muted mt-1">1〜300分の間で入力してください</p>
+                                <div className="border-t border-dashed border-card-border" />
+
+                                {/* Section 2: Date & Time */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">レッスン日 <span className="text-danger">*</span></label>
+                                        <CustomDatePicker
+                                            value={formState.lessonDate}
+                                            onChange={(date) => dispatch({ type: "SET_LESSON_DATE", date })}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">時間設定 <span className="text-danger">*</span></label>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {[30, 45, 60, 90].map((duration) => (
+                                                <button
+                                                    key={duration}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        dispatch({ type: "TOGGLE_CUSTOM_DURATION", show: false });
+                                                        dispatch({ type: "SET_DURATION", duration });
+                                                    }}
+                                                    className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${!formState.showCustomDuration && formState.lessonDuration === duration
+                                                        ? "bg-accent-bg border-accent text-accent"
+                                                        : "bg-card-solid border-card-border text-t-secondary hover:bg-accent-bg-hover"
+                                                        }`}
+                                                >
+                                                    {duration}分
+                                                </button>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                onClick={() => dispatch({ type: "TOGGLE_CUSTOM_DURATION", show: true })}
+                                                className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${formState.showCustomDuration
+                                                    ? "bg-accent-bg border-accent text-accent"
+                                                    : "bg-card-solid border-card-border text-t-secondary hover:bg-accent-bg-hover"
+                                                    }`}
+                                            >
+                                                手動入力
+                                            </button>
                                         </div>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-t-secondary mb-2">開始日時 <span className="text-danger">*</span></label>
-                                        <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
+
+                                        {formState.showCustomDuration && (
+                                            <div className="mb-3">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="300"
+                                                    className="w-full px-4 py-2 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
+                                                    placeholder="分数を入力 (例: 75)"
+                                                    value={formState.customDuration}
+                                                    onChange={handleCustomDurationChange}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-3 items-center">
+                                            <div>
+                                                <CustomTimePicker
+                                                    value={formState.startTime}
+                                                    onChange={(time) => dispatch({ type: "SET_START_TIME", time })}
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-center text-t-muted">〜</div>
+                                            <div>
+                                                <CustomTimePicker
+                                                    value={formState.endTime}
+                                                    onChange={(time) => dispatch({ type: "SET_END_TIME", time })}
+                                                />
+                                            </div>
+                                        </div>
+                                        {(formErrors.startTime || formErrors.endTime) && (
+                                            <p className="text-danger text-sm mt-1">{formErrors.startTime || formErrors.endTime}</p>
+                                        )}
                                     </div>
+                                </div>
+
+                                <div className="border-t border-dashed border-card-border" />
+
+                                {/* Section 3: Optional Info */}
+                                <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-t-secondary mb-2">終了日時 <span className="text-danger">*</span></label>
-                                        <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">場所（任意）</label>
+                                        <input
+                                            name="location"
+                                            disabled={formState.saving}
+                                            defaultValue={editingEvent?.location || (typeof window !== "undefined" ? localStorage.getItem("lastLessonLocation") || "" : "")}
+                                            className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed"
+                                            placeholder="例: 自宅スタジオ"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <button
+                                            type="button"
+                                            onClick={() => dispatch({ type: "TOGGLE_MEMO", show: !formState.showMemo })}
+                                            className="flex items-center gap-2 text-sm font-medium text-accent hover:text-accent-dark transition-colors"
+                                        >
+                                            {formState.showMemo ? "− メモを隠す" : "+ メモを追加"}
+                                        </button>
+
+                                        {formState.showMemo && (
+                                            <div className="mt-2 animate-in fade-in slide-in-from-top-1">
+                                                <textarea
+                                                    name="description"
+                                                    rows={3}
+                                                    disabled={formState.saving}
+                                                    defaultValue={editingEvent?.description}
+                                                    className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed resize-none"
+                                                    placeholder="練習曲、注意点など..."
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-t-secondary mb-2">場所</label>
-                                    <input name="location" defaultValue={editingEvent?.location} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: 自宅スタジオ" />
+
+                                <div className="pt-2">
+                                    <button type="submit" disabled={formState.saving} className="w-full py-3.5 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 hover:shadow-xl hover:scale-[1.02] transition-all">
+                                        {formState.saving ? (editingEvent ? "更新中..." : "作成中...") : (editingEvent ? "更新する" : "作成する")}
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-t-secondary mb-2">メモ</label>
-                                    <textarea name="description" rows={3} defaultValue={editingEvent?.description} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="練習曲、注意点など..." />
-                                </div>
-                                <button type="submit" disabled={saving} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50">
-                                    {saving ? "保存中..." : (editingEvent ? "更新する" : "作成する")}
-                                </button>
                             </form>
                         </div>
                     </div>

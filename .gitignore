@@ -44,3 +44,6 @@ next-env.d.ts
 # secrets
 service-account.json
 
+# Claude Code local settings
+.claude/
+

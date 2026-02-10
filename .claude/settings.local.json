@@ -6,7 +6,8 @@
       "Bash(npm run dev:*)",
       "Bash(timeout /t 10)",
       "Bash(tasklist:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -80,9 +80,10 @@ export async function createLesson(event: Omit<CalendarEvent, "id">) {
         });
 
         return { success: true, eventId: response.data.id };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error creating calendar event:", error);
-        return { success: false, error };
+        const message = error?.message || "カレンダーイベントの作成に失敗しました";
+        return { success: false, error: message };
     }
 }
 
@@ -110,9 +111,10 @@ export async function updateLesson(event: CalendarEvent) {
         });
 
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error updating calendar event:", error);
-        return { success: false, error };
+        const message = error?.message || "カレンダーイベントの更新に失敗しました";
+        return { success: false, error: message };
     }
 }
 
@@ -127,8 +129,9 @@ export async function deleteLesson(eventId: string) {
         });
 
         return { success: true };
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error deleting calendar event:", error);
-        return { success: false, error };
+        const message = error?.message || "カレンダーイベントの削除に失敗しました";
+        return { success: false, error: message };
     }
 }

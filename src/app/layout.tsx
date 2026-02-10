@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastContainer } from "@/components/Toast";
 
 export const metadata: Metadata = {
     title: "Piano Lesson Manager",
@@ -21,7 +23,10 @@ export default function RootLayout({
                 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
             </head>
             <body className="antialiased bg-slate-950 text-slate-100">
-                {children}
+                <ToastProvider>
+                    {children}
+                    <ToastContainer />
+                </ToastProvider>
             </body>
         </html>
     );
