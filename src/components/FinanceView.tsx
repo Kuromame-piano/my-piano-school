@@ -501,7 +501,7 @@ export default function FinanceView() {
             </header>
 
             {/* Tabs */}
-            <div className="flex gap-1 sm:gap-2 p-1 bg-card-solid rounded-xl border border-card-border overflow-x-auto max-w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div className="flex items-center gap-1 sm:gap-2 p-1 bg-card-solid rounded-xl border border-card-border overflow-x-auto max-w-full" style={{ WebkitOverflowScrolling: 'touch' }}>
                 <button onClick={() => setActiveTab("transactions")} className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === "transactions" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <Wallet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />取引一覧
                 </button>

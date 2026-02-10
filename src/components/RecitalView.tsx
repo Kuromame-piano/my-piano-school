@@ -391,8 +391,8 @@ export default function RecitalView() {
                                 )}
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => { setEditingRecital(selectedRecital); setIsAddModalOpen(true); }} className="p-2 bg-accent-bg hover:bg-accent-bg-hover rounded-lg transition-colors"><Pencil className="w-4 h-4 text-accent" /></button>
-                                <button onClick={() => handleDeleteRecital(selectedRecital.id)} className="p-2 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg"><Trash2 className="w-4 h-4 text-rose-400" /></button>
+                                <button onClick={() => { setEditingRecital(selectedRecital); setIsAddModalOpen(true); }} className="flex items-center justify-center p-2 bg-accent-bg hover:bg-accent-bg-hover rounded-lg transition-colors"><Pencil className="w-4 h-4 text-accent" /></button>
+                                <button onClick={() => handleDeleteRecital(selectedRecital.id)} className="flex items-center justify-center p-2 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg"><Trash2 className="w-4 h-4 text-rose-400" /></button>
                             </div>
                         </div>
 

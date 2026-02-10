@@ -507,8 +507,8 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
         // Validate title based on mode
         if (formState.titleMode === "student") {
             const form = document.querySelector("form");
-            const titleInput = form?.querySelector('input[name="title"]') as HTMLInputElement;
-            if (!titleInput?.value?.trim()) {
+            const titleElement = form?.querySelector('[name="title"]') as HTMLSelectElement | HTMLInputElement;
+            if (!titleElement?.value?.trim()) {
                 errors.title = "生徒名を選択してください";
             }
         } else if (formState.titleMode === "other" && !formState.customTitle.trim()) {
@@ -1193,38 +1193,21 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                                     {formState.titleMode === "student" && (
                                         <div>
                                             <label className="block text-sm font-medium text-t-secondary mb-2">生徒名 <span className="text-danger">*</span></label>
-                                            <div className="relative">
-                                                <input
-                                                    key={presetStudentName || "student-input"}
-                                                    id="student-name-input"
-                                                    name="title"
-                                                    list="student-names"
-                                                    required
-                                                    disabled={formState.saving}
-                                                    defaultValue={editingEvent?.title || presetStudentName}
-                                                    onBlur={() => validateForm(false)}
-                                                    className="w-full px-4 py-3 pr-10 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed"
-                                                    placeholder="例: 山田花子"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    tabIndex={-1}
-                                                    onClick={() => {
-                                                        const input = document.getElementById('student-name-input') as HTMLInputElement;
-                                                        if (input) { input.value = ''; input.focus(); }
-                                                    }}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-t-muted hover:text-t-primary transition-colors"
-                                                    aria-label="入力をクリア"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <datalist id="student-names">
+                                            <select
+                                                key={presetStudentName || "student-select"}
+                                                name="title"
+                                                required
+                                                disabled={formState.saving}
+                                                defaultValue={editingEvent?.title || presetStudentName || ""}
+                                                onBlur={() => validateForm(false)}
+                                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus disabled:cursor-not-allowed appearance-none"
+                                            >
+                                                <option value="">生徒を選択してください</option>
                                                 {students
                                                     .filter(s => !s.archived)
                                                     .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
-                                                    .map(s => <option key={s.id} value={s.name} />)}
-                                            </datalist>
+                                                    .map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                            </select>
                                             {formErrors.title && (
                                                 <p className="text-danger text-sm mt-1">{formErrors.title}</p>
                                             )}
