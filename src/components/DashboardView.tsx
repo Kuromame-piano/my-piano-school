@@ -6,7 +6,7 @@ import { getStudents, Student } from "../actions/studentActions";
 import { getTransactions, getTuitionPayments, Transaction, TuitionPayment } from "../actions/financeActions";
 import { getLessons, CalendarEvent } from "../actions/calendarActions";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 
 
 import { NavigationPayload } from "@/app/page";
@@ -56,18 +56,23 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
 
     const [selectedDate, setSelectedDate] = useState(new Date());
 
+    // Cache student data for daily lesson lookups
+    const studentsRef = useRef<Student[]>([]);
+
+    // Effect 1: Static data – runs only on mount
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchStaticData = async () => {
             const now = new Date();
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
 
-            const [studentData, transactions, events, tuitionPayments] = await Promise.all([
+            const [studentData, transactions, tuitionPayments] = await Promise.all([
                 getStudents(),
                 getTransactions(),
-                getLessons(),
                 getTuitionPayments(currentYear, currentMonth + 1)
             ]);
+
+            studentsRef.current = studentData;
 
             // 1. Calculate Stats
             const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
@@ -78,8 +83,6 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                 .reduce((sum, t) => sum + t.amount, 0);
 
             // 2. Unpaid Tuition Logic
-            // Active students with monthly payment who haven't paid yet
-            // Paid students are those in tuitionPayments with paid=true
             const paidStudentIds = tuitionPayments.filter(p => p.paid).map(p => p.studentId);
 
             const unpaidList = activeStudents
@@ -96,40 +99,6 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                 unpaidCount: unpaidList.length
             });
             setUnpaidStudents(unpaidList);
-
-            // 3. Lessons for Selected Date
-            // We use the already fetched events which cover 2 weeks range by default in getLessons.
-            // However, getLessons default might not cover if user navigates far.
-            // Ideally we should refetch events when date changes if it's outside range, but for now let's filter from what we have
-            // or fetch specifically for the date if we want to be robust. 
-            // The getLessons call in valid range is better.
-
-            // Let's re-fetch specifically for the selected date to ensure we get them
-            const dateStr = selectedDate.toISOString().split('T')[0];
-
-            // Fetch lessons for the specific day (using 1 day range)
-            // We can just use the events we got if they cover it, but let's be safe and filter or refetch.
-            // Since `getLessons` without args defaults to now+14days, if we go back to yesterday it might be missing.
-            // So we should fetch based on selectedDate.
-
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            const dayEvents = await getLessons(startOfDay.toISOString(), endOfDay.toISOString());
-
-            setTodaysLessons(dayEvents.map(e => {
-                const matchingStudent = studentData.find(s => s.name === e.title);
-                // Also try to match by partial name if exact match fails, or rely on strict naming
-                return {
-                    name: e.title,
-                    piece: e.description || "練習曲",
-                    time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                    color: matchingStudent?.color || "bg-pink-500",
-                    studentId: matchingStudent?.id
-                };
-            }));
 
             // 4. Recent Achievements (Completed pieces in last 30 days)
             const thirtyDaysAgo = new Date();
@@ -151,9 +120,8 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                     }
                 });
             });
-            // Sort by most recent
             achievements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setRecentAchievements(achievements.slice(0, 5)); // Top 5
+            setRecentAchievements(achievements.slice(0, 5));
 
             // 5. Upcoming Birthdays (This month)
             const birthdays = activeStudents
@@ -171,11 +139,36 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                         age: currentYear - birthDate.getFullYear()
                     };
                 })
-                .sort((a, b) => a.day - b.day); // Sort by day of month
+                .sort((a, b) => a.day - b.day);
 
             setUpcomingBirthdays(birthdays);
         };
-        fetchData();
+        fetchStaticData();
+    }, []);
+
+    // Effect 2: Daily lessons – runs only when selectedDate changes
+    useEffect(() => {
+        const fetchDailyLessons = async () => {
+            const startOfDay = new Date(selectedDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(selectedDate);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const dayEvents = await getLessons(startOfDay.toISOString(), endOfDay.toISOString());
+            const studentData = studentsRef.current;
+
+            setTodaysLessons(dayEvents.map(e => {
+                const matchingStudent = studentData.find(s => s.name === e.title);
+                return {
+                    name: e.title,
+                    piece: e.description || "練習曲",
+                    time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                    color: matchingStudent?.color || "bg-pink-500",
+                    studentId: matchingStudent?.id
+                };
+            }));
+        };
+        fetchDailyLessons();
     }, [selectedDate]);
 
     const statItems = [

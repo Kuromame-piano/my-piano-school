@@ -245,8 +245,7 @@ export default function ReportsView({ initialStudentId }: { initialStudentId?: n
                                         >
                                             <div className="flex items-center gap-3 mb-2">
                                                 <div
-                                                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                                                    style={{ backgroundColor: student.color || "#ccc" }}
+                                                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${student.color || "bg-pink-500"}`}
                                                 >
                                                     {student.name.charAt(0)}
                                                 </div>
@@ -281,8 +280,7 @@ export default function ReportsView({ initialStudentId }: { initialStudentId?: n
                         </button>
                         <div className="flex items-center gap-3">
                             <div
-                                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm"
-                                style={{ backgroundColor: selectedStudent.color || "#ccc" }}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-sm ${selectedStudent.color || "bg-pink-500"}`}
                             >
                                 {selectedStudent.name.charAt(0)}
                             </div>
