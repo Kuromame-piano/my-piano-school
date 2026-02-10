@@ -480,13 +480,39 @@ export default function StudentsView({ initialStudentId }: StudentsViewProps = {
                                     <p className="text-center py-12 text-t-muted">まだ合格した曲はありません</p>
                                 ) : (
                                     selectedStudent.pieces.filter((p) => p.status === "completed").map((piece) => (
-                                        <div key={piece.id} className="flex items-center gap-4 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                                        <div key={piece.id} className="flex items-center gap-4 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl group/item">
                                             {piece.coverImage ? (
                                                 <img src={piece.coverImage} alt={piece.title} className="w-12 h-12 rounded-lg object-cover" />
                                             ) : (
                                                 <div className="p-2 bg-emerald-500/10 rounded-lg"><Music className="w-5 h-5 text-emerald-400" /></div>
                                             )}
-                                            <div className="flex-1"><h4 className="font-medium text-emerald-700">{piece.title}</h4><p className="text-xs text-emerald-600">合格: {piece.completedAt}</p></div>
+                                            <div className="flex-1">
+                                                <h4 className="font-medium text-emerald-700">{piece.title}</h4>
+                                                <p className="text-xs text-emerald-600">合格: {piece.completedAt}</p>
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm("この曲を「練習中」に戻しますか？\n\n合格日は削除され、進捗は0%に戻ります。")) return;
+
+                                                    const updatedStudent = {
+                                                        ...selectedStudent,
+                                                        pieces: selectedStudent.pieces.map((p) =>
+                                                            p.id === piece.id ? { ...p, status: "active" as const, progress: 0, completedAt: undefined } : p
+                                                        ),
+                                                    };
+
+                                                    // UIを即座に更新
+                                                    setStudents((prev) => prev.map((s) => (s.id === selectedStudent.id ? updatedStudent : s)));
+                                                    setSelectedStudent(updatedStudent);
+
+                                                    // データを保存
+                                                    await saveStudent(updatedStudent);
+                                                }}
+                                                className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-emerald-100 rounded-lg opacity-0 group-hover/item:opacity-100 transition-all"
+                                                title="練習中に戻す"
+                                            >
+                                                <History className="w-5 h-5" />
+                                            </button>
                                         </div>
                                     ))
                                 )

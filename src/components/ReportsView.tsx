@@ -79,7 +79,7 @@ export default function ReportsView() {
     const BODY_SENTENCES = [
         "{曲名}、順調に進んでいます。特に{良かった点}が素晴らしかったです。",
         "今日は{曲名}に集中して取り組みました。{良かった点}がとても良くなっていて、日々の練習の成果が出ていますね！",
-        "{曲名}、少し難しい箇所がありましたが、焦らず一緒に進めていきましょう。{アドバイス}",
+        "{曲名}、少し難しい箇所がありましたが、{良かった点}などの良い部分もたくさんありました。焦らず一緒に進めていきましょう。{アドバイス}",
         "{曲名}の練習を通して、大きな成長が見られました！特に{良かった点}の上達が素晴らしいです。",
         "{曲名}、もう少しで仕上がりそうですね。{良かった点}が特に良くなってきました。",
         "今日から{曲名}に挑戦しましたね。初めてでしたが、{良かった点}が既にできていて素晴らしかったです。",
@@ -206,15 +206,18 @@ export default function ReportsView() {
                         </div>
 
                         {/* Template selector replacement: Modular selectors */}
-                        <div className="glass-card p-6 space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-t-secondary mb-3">1. 本文を選択</label>
-                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                        <div className="space-y-6">
+                            <div className="glass-card p-6">
+                                <label className="block text-lg font-bold text-t-primary mb-4 border-b border-card-border pb-2">
+                                    <span className="bg-accent text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm mr-2">1</span>
+                                    本文を選択
+                                </label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                                     {BODY_SENTENCES.map((text, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setSelectedBody(text)}
-                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedBody === text ? "bg-accent-bg border border-accent ring-1 ring-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}
+                                            className={`w-full p-4 rounded-xl text-left text-sm transition-all leading-relaxed ${selectedBody === text ? "bg-accent-bg border border-accent ring-1 ring-accent text-t-primary shadow-sm" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover text-t-secondary"}`}
                                         >
                                             {text}
                                         </button>
@@ -222,14 +225,17 @@ export default function ReportsView() {
                                 </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-t-secondary mb-3">2. 締めを選択</label>
-                                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                            <div className="glass-card p-6">
+                                <label className="block text-lg font-bold text-t-primary mb-4 border-b border-card-border pb-2">
+                                    <span className="bg-accent text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm mr-2">2</span>
+                                    締めを選択
+                                </label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                                     {CLOSING_SENTENCES.map((text, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setSelectedClosing(text)}
-                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedClosing === text ? "bg-accent-bg border border-accent ring-1 ring-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}
+                                            className={`w-full p-4 rounded-xl text-left text-sm transition-all leading-relaxed ${selectedClosing === text ? "bg-accent-bg border border-accent ring-1 ring-accent text-t-primary shadow-sm" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover text-t-secondary"}`}
                                         >
                                             {text}
                                         </button>

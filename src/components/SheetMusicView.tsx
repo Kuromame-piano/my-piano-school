@@ -9,6 +9,8 @@ export default function SheetMusicView() {
     const [sheetMusic, setSheetMusic] = useState<SheetMusic[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
+    const [sortBy, setSortBy] = useState<"title" | "composer" | "difficulty" | "genre">("title");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [selectedMusic, setSelectedMusic] = useState<SheetMusic | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingMusic, setEditingMusic] = useState<SheetMusic | null>(null);
@@ -32,7 +34,14 @@ export default function SheetMusicView() {
     const filteredMusic = sheetMusic.filter(
         (m) => m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.composer.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    ).sort((a, b) => {
+        const order = sortOrder === "asc" ? 1 : -1;
+        if (sortBy === "title") return a.title.localeCompare(b.title, "ja") * order;
+        if (sortBy === "composer") return a.composer.localeCompare(b.composer, "ja") * order;
+        if (sortBy === "difficulty") return ((a.difficulty || 0) - (b.difficulty || 0)) * order;
+        if (sortBy === "genre") return (a.genre || "").localeCompare(b.genre || "", "ja") * order;
+        return 0;
+    });
 
     const handleSaveMusic = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -46,8 +55,8 @@ export default function SheetMusicView() {
                 id: editingMusic ? editingMusic.id : Date.now(),
                 title: formData.get("title") as string,
                 composer: formData.get("composer") as string,
-                difficulty: parseInt(formData.get("difficulty") as string),
-                genre: formData.get("genre") as string,
+                difficulty: formData.get("difficulty") ? parseInt(formData.get("difficulty") as string) : undefined,
+                genre: formData.get("genre") as string || undefined,
                 pdfUrl: formData.get("pdfUrl") as string,
                 notes: formData.get("notes") as string,
             };
@@ -82,17 +91,30 @@ export default function SheetMusicView() {
             <header className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-gradient mb-2">楽譜ライブラリ</h2>
-                    <p className="text-gray-500">教本・楽譜のカタログを管理（生徒への割り当ては生徒管理から行います）</p>
+                    <p className="text-gray-500">教本・楽譜のカタログを管理</p>
                 </div>
                 <button onClick={() => { setEditingMusic(null); setIsAddModalOpen(true); }} className="flex items-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
                     <Plus className="w-5 h-5" />楽譜を追加
                 </button>
             </header>
 
-            {/* Search */}
-            <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-t-muted" />
-                <input type="text" placeholder="曲名・作曲者で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" />
+            {/* Search and Sort */}
+            <div className="flex gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-t-muted" />
+                    <input type="text" placeholder="曲名・作曲者で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" />
+                </div>
+                <div className="flex bg-card-solid rounded-xl border border-card-border p-1">
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-transparent text-sm font-medium text-t-secondary px-3 py-2 rounded-lg focus:outline-none">
+                        <option value="title">曲名順</option>
+                        <option value="composer">作曲者順</option>
+                        <option value="difficulty">難易度順</option>
+                        <option value="genre">ジャンル順</option>
+                    </select>
+                    <button onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")} className="px-3 hover:bg-accent-bg-hover rounded-lg text-t-secondary">
+                        {sortOrder === "asc" ? "↑" : "↓"}
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -117,8 +139,10 @@ export default function SheetMusicView() {
                                             <h3 className="font-semibold text-lg text-t-primary">{music.title}</h3>
                                             <p className="text-sm text-t-secondary">{music.composer}</p>
                                             <div className="flex items-center gap-3 mt-2">
-                                                <span className="text-xs px-2 py-1 bg-accent-bg rounded-full text-accent">{music.genre}</span>
-                                                <div className="flex">{getDifficultyStars(music.difficulty)}</div>
+                                                <div className="flex items-center gap-3 mt-2">
+                                                    {music.genre && <span className="text-xs px-2 py-1 bg-accent-bg rounded-full text-accent">{music.genre}</span>}
+                                                    {music.difficulty && <div className="flex">{getDifficultyStars(music.difficulty)}</div>}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -142,8 +166,9 @@ export default function SheetMusicView() {
                                 </div>
                                 <div className="space-y-3 text-sm">
                                     <p className="flex items-center gap-2 text-t-primary"><User className="w-4 h-4 text-t-muted" />{selectedMusic.composer}</p>
-                                    <div className="flex items-center gap-2"><Star className="w-4 h-4 text-t-muted" />{getDifficultyStars(selectedMusic.difficulty)}</div>
-                                    <p className="flex items-center gap-2 text-t-primary"><FileText className="w-4 h-4 text-t-muted" />{selectedMusic.genre}</p>
+
+                                    {selectedMusic.difficulty && <div className="flex items-center gap-2"><Star className="w-4 h-4 text-t-muted" />{getDifficultyStars(selectedMusic.difficulty)}</div>}
+                                    {selectedMusic.genre && <p className="flex items-center gap-2 text-t-primary"><FileText className="w-4 h-4 text-t-muted" />{selectedMusic.genre}</p>}
                                     {selectedMusic.pdfUrl && (
                                         <a href={selectedMusic.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-accent hover:text-accent-hover">
                                             <ExternalLink className="w-4 h-4" />楽譜を開く
@@ -156,15 +181,7 @@ export default function SheetMusicView() {
                             </div>
 
                             {/* Info Card */}
-                            <div className="glass-card p-6 bg-info-bg border-info">
-                                <div className="flex items-start gap-3">
-                                    <Library className="w-5 h-5 text-info mt-0.5" />
-                                    <div className="text-sm text-info-dark">
-                                        <p className="font-semibold mb-1">生徒への割り当てについて</p>
-                                        <p className="text-info-dark/80">この楽譜を生徒に割り当てるには、<span className="font-medium">生徒管理</span>画面から生徒を選択し、「練習中」または「教本」タブで追加してください。</p>
-                                    </div>
-                                </div>
-                            </div>
+
                         </>
                     ) : (
                         <div className="glass-card p-8 text-center">
@@ -194,13 +211,15 @@ export default function SheetMusicView() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-t-secondary mb-2">難易度</label>
-                                    <select name="difficulty" defaultValue={editingMusic?.difficulty || 3} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                                    <select name="difficulty" defaultValue={editingMusic?.difficulty || ""} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                                        <option value="">未設定</option>
                                         {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{"★".repeat(n)}</option>)}
                                     </select>
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-t-secondary mb-2">ジャンル</label>
-                                    <select name="genre" defaultValue={editingMusic?.genre || "クラシック"} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                                    <select name="genre" defaultValue={editingMusic?.genre || ""} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                                        <option value="">未設定</option>
                                         {genres.map((g) => <option key={g} value={g}>{g}</option>)}
                                     </select>
                                 </div>

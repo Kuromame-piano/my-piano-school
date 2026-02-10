@@ -6,7 +6,7 @@ import { Calendar, MapPin, ChevronLeft, ChevronRight, X, Clock, AlignLeft, Plus,
 import { getLessons, createLesson, updateLesson, deleteLesson, CalendarEvent } from "../actions/calendarActions";
 import { getStudents, Student } from "../actions/studentActions";
 
-type ViewMode = "month" | "week";
+type ViewMode = "month" | "week" | "summary";
 
 export default function ScheduleView() {
     const [mounted, setMounted] = useState(false);
@@ -29,7 +29,7 @@ export default function ScheduleView() {
 
         let startDate: Date, endDate: Date;
 
-        if (viewMode === "month") {
+        if (viewMode === "month" || viewMode === "summary") {
             startDate = new Date(year, month, 1);
             endDate = new Date(year, month + 1, 0, 23, 59, 59);
         } else {
@@ -72,7 +72,7 @@ export default function ScheduleView() {
             const endDate = new Date(year, month + 1, 0, 23, 59, 59);
 
             // Only fetch if different from current view
-            if (viewMode === "month" &&
+            if ((viewMode === "month" || viewMode === "summary") &&
                 currentDate.getFullYear() === year &&
                 currentDate.getMonth() === month) {
                 return; // Already have the data
@@ -104,7 +104,7 @@ export default function ScheduleView() {
     }, [miniCalendarDate, mounted]);
 
     const handlePrev = () => {
-        if (viewMode === "month") {
+        if (viewMode === "month" || viewMode === "summary") {
             setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
         } else {
             const newDate = new Date(currentDate);
@@ -114,7 +114,7 @@ export default function ScheduleView() {
     };
 
     const handleNext = () => {
-        if (viewMode === "month") {
+        if (viewMode === "month" || viewMode === "summary") {
             setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
         } else {
             const newDate = new Date(currentDate);
@@ -305,7 +305,7 @@ export default function ScheduleView() {
 
     const handleMiniCalendarClick = (date: Date) => {
         setCurrentDate(date);
-        if (viewMode === "month") {
+        if (viewMode === "month" || viewMode === "summary") {
             setViewMode("week");
         }
     };
@@ -401,7 +401,7 @@ export default function ScheduleView() {
                 <header className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-card-border">
                     <div className="flex items-center gap-4">
                         <h2 className="text-2xl font-bold text-t-primary">
-                            {viewMode === "month" ? formatMonthYear(currentDate) : formatWeekRange(currentDate)}
+                            {(viewMode === "month" || viewMode === "summary") ? formatMonthYear(currentDate) : formatWeekRange(currentDate)}
                         </h2>
                         <div className="flex items-center bg-card-solid rounded-lg border border-card-border p-0.5">
                             <button onClick={handlePrev} className="p-1.5 hover:bg-accent-bg-hover rounded-md transition-colors"><ChevronLeft className="w-4 h-4 text-t-secondary" /></button>
@@ -415,6 +415,9 @@ export default function ScheduleView() {
                         </button>
                         <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "week" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                             <CalendarDays className="w-4 h-4" />週
+                        </button>
+                        <button onClick={() => setViewMode("summary")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "summary" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
+                            <AlignLeft className="w-4 h-4" />集計
                         </button>
                     </div>
                 </header>
@@ -478,9 +481,59 @@ export default function ScheduleView() {
                         </div>
                     )}
                 </div>
+
+                {/* Summary View */}
+                {viewMode === "summary" && (
+                    <div className="h-full overflow-y-auto pr-2">
+                        <div className="glass-card p-6">
+                            <h3 className="font-semibold text-lg mb-4 text-t-primary">レッスン実施状況 ({formatMonthYear(currentDate)})</h3>
+                            {events.length === 0 ? (
+                                <p className="text-center py-8 text-t-muted">レッスン記録がありません</p>
+                            ) : (
+                                <div className="w-full overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-card-border">
+                                                <th className="py-3 px-4 font-medium text-t-secondary text-sm">生徒名</th>
+                                                <th className="py-3 px-4 font-medium text-t-secondary text-sm">回数</th>
+                                                <th className="py-3 px-4 font-medium text-t-secondary text-sm">実施日</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-card-border">
+                                            {Object.entries(
+                                                events.reduce((acc, event) => {
+                                                    const name = event.title;
+                                                    if (!acc[name]) acc[name] = [];
+                                                    acc[name].push(new Date(event.start));
+                                                    return acc;
+                                                }, {} as Record<string, Date[]>)
+                                            ).sort((a, b) => b[1].length - a[1].length).map(([name, dates]) => (
+                                                <tr key={name} className="hover:bg-accent-bg-hover/50 transition-colors">
+                                                    <td className="py-3 px-4 font-medium text-t-primary">{name}</td>
+                                                    <td className="py-3 px-4">
+                                                        <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-accent-bg text-accent text-xs font-bold">{dates.length}</span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm text-t-secondary">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {dates.sort((a, b) => a.getTime() - b.getTime()).map((date, idx) => (
+                                                                <span key={idx} className="bg-card-solid border border-card-border px-2 py-0.5 rounded text-xs whitespace-nowrap">
+                                                                    {date.getDate()}日({["日", "月", "火", "水", "木", "金", "土"][date.getDay()]})
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {/* Schedule Content */}
+
 
 
             {/* Event Detail Modal */}
@@ -588,6 +641,6 @@ export default function ScheduleView() {
                     </div>
                 )
             }
-        </div >
+        </div>
     );
 }
