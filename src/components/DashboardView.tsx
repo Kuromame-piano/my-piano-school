@@ -297,42 +297,64 @@ export default function DashboardView({ onNavigate }: DashboardViewProps) {
                                 </div>
                             ) : (
                                 todaysLessons.map((lesson, i) => (
-                                    <div key={i} className="p-4 flex items-center gap-4 hover:bg-card-bg-hover transition-colors group">
-                                        <div className="flex flex-col items-center min-w-[60px]">
-                                            <span className="text-xl font-semibold text-t-primary leading-none">
-                                                {lesson.time}
-                                            </span>
+                                    <div key={i} className="p-3 sm:p-4 hover:bg-card-bg-hover transition-colors group">
+                                        <div className="flex items-center gap-3 sm:gap-4">
+                                            <div className="flex flex-col items-center min-w-[50px] sm:min-w-[60px]">
+                                                <span className="text-lg sm:text-xl font-semibold text-t-primary leading-none">
+                                                    {lesson.time}
+                                                </span>
+                                            </div>
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${lesson.color} flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm flex-shrink-0`}>
+                                                {lesson.name[0]}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-t-primary truncate text-sm sm:text-base">{lesson.name}</p>
+                                                <p className="text-xs sm:text-sm text-t-secondary truncate">{lesson.piece}</p>
+                                            </div>
+                                            {/* Quick Actions - Desktop: inline, always visible */}
+                                            <div className="hidden sm:flex items-center gap-2">
+                                                <button
+                                                    className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg tooltip-trigger transition-colors"
+                                                    title="生徒ノート"
+                                                    onClick={() => lesson.studentId && onNavigate({ view: "students", studentId: lesson.studentId, initialTab: "notes" })}
+                                                >
+                                                    <StickyNote className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                                                    title="レッスン報告"
+                                                    onClick={() => lesson.studentId && onNavigate({ view: "reports", studentId: lesson.studentId })}
+                                                >
+                                                    <FileText className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    className="p-2 text-accent hover:bg-accent/10 rounded-lg transition-colors"
+                                                    title="次回予約"
+                                                    onClick={() => onNavigate({ view: "schedule", scheduleStudentName: lesson.name })}
+                                                >
+                                                    <CalendarPlus className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        <div className={`w-10 h-10 rounded-full ${lesson.color} flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0`}>
-                                            {lesson.name[0]}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-t-primary truncate">{lesson.name}</p>
-                                            <p className="text-sm text-t-secondary truncate">{lesson.piece}</p>
-                                        </div>
-
-                                        {/* Quick Actions */}
-                                        <div className="flex items-center gap-2">
+                                        {/* Quick Actions - Mobile: row below, always visible */}
+                                        <div className="flex sm:hidden items-center gap-1 mt-2 ml-[50px] pl-[calc(2rem+0.75rem)]">
                                             <button
-                                                className="p-2 text-blue-500 hover:bg-blue-500/10 rounded-lg tooltip-trigger transition-colors"
-                                                title="生徒ノート"
+                                                className="flex items-center gap-1 px-2 py-1.5 text-blue-500 bg-blue-500/5 hover:bg-blue-500/10 rounded-lg transition-colors text-xs font-medium"
                                                 onClick={() => lesson.studentId && onNavigate({ view: "students", studentId: lesson.studentId, initialTab: "notes" })}
                                             >
-                                                <StickyNote className="w-5 h-5" />
+                                                <StickyNote className="w-3.5 h-3.5" />ノート
                                             </button>
                                             <button
-                                                className="p-2 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                                                title="レッスン報告"
+                                                className="flex items-center gap-1 px-2 py-1.5 text-emerald-500 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-lg transition-colors text-xs font-medium"
                                                 onClick={() => lesson.studentId && onNavigate({ view: "reports", studentId: lesson.studentId })}
                                             >
-                                                <FileText className="w-5 h-5" />
+                                                <FileText className="w-3.5 h-3.5" />報告
                                             </button>
                                             <button
-                                                className="p-2 text-accent hover:bg-accent/10 rounded-lg transition-colors"
-                                                title="次回予約"
+                                                className="flex items-center gap-1 px-2 py-1.5 text-accent bg-accent/5 hover:bg-accent/10 rounded-lg transition-colors text-xs font-medium"
                                                 onClick={() => onNavigate({ view: "schedule", scheduleStudentName: lesson.name })}
                                             >
-                                                <CalendarPlus className="w-5 h-5" />
+                                                <CalendarPlus className="w-3.5 h-3.5" />予約
                                             </button>
                                         </div>
                                     </div>

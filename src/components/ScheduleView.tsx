@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useReducer } from "react";
-import { Calendar, MapPin, ChevronLeft, ChevronRight, X, Clock, AlignLeft, Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
+import { Calendar, MapPin, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, X, Clock, AlignLeft, Plus, Pencil, Trash2, CalendarDays } from "lucide-react";
 
 import { getLessons, createLesson, updateLesson, deleteLesson, CalendarEvent } from "../actions/calendarActions";
 import { getStudents, Student } from "../actions/studentActions";
@@ -375,6 +375,7 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
     const [miniCalendarDate, setMiniCalendarDate] = useState(new Date());
     const [presetStudentName, setPresetStudentName] = useState<string>("");
+    const [isMiniCalendarOpen, setIsMiniCalendarOpen] = useState(false);
 
     // Consolidated form state with useReducer
     const [formState, dispatch] = useReducer(lessonFormReducer, initialFormState);
@@ -864,7 +865,7 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
     return (
         <div className="flex flex-col lg:flex-row h-full gap-6">
             {/* Sidebar (Mini Calendar & Controls) */}
-            <div className="w-full lg:w-[220px] flex-shrink-0 space-y-6">
+            <div className="w-full lg:w-[220px] flex-shrink-0 space-y-4 lg:space-y-6">
                 <div className="hidden lg:block">
                     <button onClick={() => openAddModal()} className="w-full flex items-center justify-center gap-2 px-4 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all hover:scale-105">
                         <Plus className="w-5 h-5" />
@@ -872,52 +873,66 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                     </button>
                 </div>
 
-                {/* Mini Calendar */}
-                <div className="glass-card p-1.5 w-full max-w-[220px] mx-auto lg:mx-0">
-                    <div className="flex items-center justify-between mb-1.5 px-0.5">
-                        <button onClick={handleMiniCalendarPrev} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
-                            <ChevronLeft className="w-2.5 h-2.5 text-t-secondary" />
-                        </button>
-                        <h3 className="font-semibold text-xs text-t-primary">
-                            {miniCalendarDate.getMonth() + 1}月 {miniCalendarDate.getFullYear()}
-                        </h3>
-                        <button onClick={handleMiniCalendarNext} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
-                            <ChevronRight className="w-2.5 h-2.5 text-t-secondary" />
-                        </button>
-                    </div>
+                {/* Mini Calendar - Desktop: always visible, Mobile: collapsible */}
+                {/* Mobile toggle button */}
+                <button
+                    onClick={() => setIsMiniCalendarOpen(!isMiniCalendarOpen)}
+                    className="lg:hidden w-full flex items-center justify-between px-4 py-3 glass-card text-sm font-medium text-t-primary"
+                >
+                    <span className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-accent" />
+                        {miniCalendarDate.getMonth() + 1}月 {miniCalendarDate.getFullYear()}
+                    </span>
+                    {isMiniCalendarOpen ? <ChevronUp className="w-4 h-4 text-t-secondary" /> : <ChevronDown className="w-4 h-4 text-t-secondary" />}
+                </button>
 
-                    <div className="grid grid-cols-7 gap-px mb-0.5">
-                        {["月", "火", "水", "木", "金", "土", "日"].map((day, i) => (
-                            <div key={i} className="text-center text-[8px] font-medium text-t-muted">
-                                {day}
-                            </div>
-                        ))}
-                    </div>
+                <div className={`${isMiniCalendarOpen ? "block" : "hidden"} lg:block`}>
+                    <div className="glass-card p-1.5 w-full max-w-[220px] mx-auto lg:mx-0">
+                        <div className="flex items-center justify-between mb-1.5 px-0.5">
+                            <button onClick={handleMiniCalendarPrev} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
+                                <ChevronLeft className="w-2.5 h-2.5 text-t-secondary" />
+                            </button>
+                            <h3 className="font-semibold text-xs text-t-primary">
+                                {miniCalendarDate.getMonth() + 1}月 {miniCalendarDate.getFullYear()}
+                            </h3>
+                            <button onClick={handleMiniCalendarNext} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
+                                <ChevronRight className="w-2.5 h-2.5 text-t-secondary" />
+                            </button>
+                        </div>
 
-                    <div className="grid grid-cols-7 gap-px">
-                        {getMiniCalendarDays().map((dayInfo, i) => {
-                            const isToday = dayInfo.date.toDateString() === new Date().toDateString();
-                            const isInCurrentWeek = isDateInCurrentWeek(dayInfo.date);
-                            const eventCount = getEventCountForDate(dayInfo.date);
+                        <div className="grid grid-cols-7 gap-px mb-0.5">
+                            {["月", "火", "水", "木", "金", "土", "日"].map((day, i) => (
+                                <div key={i} className="text-center text-[8px] font-medium text-t-muted">
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
 
-                            return (
-                                <button
-                                    key={i}
-                                    onClick={() => handleMiniCalendarClick(dayInfo.date)}
-                                    className={`
-                                        relative aspect-square flex items-center justify-center rounded-sm text-[8px] transition-all
-                                        ${!dayInfo.isCurrentMonth ? "text-t-muted/50" : "text-t-primary"}
-                                        ${isToday ? "bg-accent text-white font-bold hover:bg-accent-hover" : "hover:bg-accent-bg-hover"}
-                                        ${isInCurrentWeek && !isToday ? "bg-accent-bg font-medium" : ""}
-                                    `}
-                                >
-                                    {dayInfo.date.getDate()}
-                                    {eventCount > 0 && !isToday && (
-                                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 rounded-full bg-accent" />
-                                    )}
-                                </button>
-                            );
-                        })}
+                        <div className="grid grid-cols-7 gap-px">
+                            {getMiniCalendarDays().map((dayInfo, i) => {
+                                const isToday = dayInfo.date.toDateString() === new Date().toDateString();
+                                const isInCurrentWeek = isDateInCurrentWeek(dayInfo.date);
+                                const eventCount = getEventCountForDate(dayInfo.date);
+
+                                return (
+                                    <button
+                                        key={i}
+                                        onClick={() => handleMiniCalendarClick(dayInfo.date)}
+                                        className={`
+                                            relative aspect-square flex items-center justify-center rounded-sm text-[8px] transition-all
+                                            ${!dayInfo.isCurrentMonth ? "text-t-muted/50" : "text-t-primary"}
+                                            ${isToday ? "bg-accent text-white font-bold hover:bg-accent-hover" : "hover:bg-accent-bg-hover"}
+                                            ${isInCurrentWeek && !isToday ? "bg-accent-bg font-medium" : ""}
+                                        `}
+                                    >
+                                        {dayInfo.date.getDate()}
+                                        {eventCount > 0 && !isToday && (
+                                            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 rounded-full bg-accent" />
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
 
@@ -959,7 +974,7 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                 <div className="flex-1 min-h-0">
                     {/* Week View */}
                     {viewMode === "week" && (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 h-full overflow-y-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-7 gap-2 h-full overflow-y-auto">
                             {getWeekDays().map((day, i) => {
                                 const dayEvents = getEventsForDay(day);
                                 const isToday = day.toDateString() === new Date().toDateString();
