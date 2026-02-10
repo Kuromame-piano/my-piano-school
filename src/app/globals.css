@@ -2,17 +2,82 @@
 
 /* 明るく親しみのあるテーマ */
 :root {
+    /* === ベースカラー === */
     --background: #fffbf8;
     --foreground: #3d3d3d;
+
+    /* === カード・サーフェス === */
     --card: rgba(255, 255, 255, 0.85);
+    --card-solid: #ffffff;
     --card-border: rgba(255, 182, 193, 0.3);
+
+    /* === アクセントカラー（メインブランド） === */
     --accent: #ff7b9c;
     --accent-light: #ffa5b4;
     --accent-dark: #e85d7e;
+    --accent-bg: #fff0f3;
+    /* アクセント薄い背景 */
+    --accent-bg-hover: #ffe4ea;
+    /* ホバー時 */
+
+    /* === テキスト === */
+    --text-primary: #374151;
+    --text-secondary: #6b7280;
+    --text-muted: #9ca3af;
+    --text-on-accent: #ffffff;
+
+    /* === フォーム === */
+    --input-bg: #ffffff;
+    --input-border: rgba(255, 182, 193, 0.5);
+    --input-border-focus: #ff7b9c;
+    --input-text: #374151;
+
+    /* === モーダル === */
+    --modal-bg: #ffffff;
+    --modal-border: rgba(255, 182, 193, 0.3);
+    --modal-overlay: rgba(0, 0, 0, 0.5);
+
+    /* === ボーダー・ディバイダー === */
+    --border: rgba(255, 182, 193, 0.3);
+    --border-strong: rgba(255, 182, 193, 0.5);
+
+    /* === セマンティックカラー === */
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #f43f5e;
+    --info: #3b82f6;
+
+    /* 既存のカラー定義（互換性のため維持） */
     --secondary: #ffd6e0;
     --warm-yellow: #fff3cd;
     --soft-coral: #ffb4a2;
     --mint-green: #b8e0d2;
+}
+
+@theme {
+    --color-base-bg: var(--background);
+    --color-base-fg: var(--foreground);
+    --color-card: var(--card);
+    --color-card-solid: var(--card-solid);
+    --color-card-border: var(--card-border);
+    --color-accent: var(--accent);
+    --color-accent-light: var(--accent-light);
+    --color-accent-dark: var(--accent-dark);
+    --color-accent-bg: var(--accent-bg);
+    --color-accent-bg-hover: var(--accent-bg-hover);
+    --color-t-primary: var(--text-primary);
+    --color-t-secondary: var(--text-secondary);
+    --color-t-muted: var(--text-muted);
+    --color-t-on-accent: var(--text-on-accent);
+    --color-input-bg: var(--input-bg);
+    --color-input-border: var(--input-border);
+    --color-input-border-focus: var(--input-border-focus);
+    --color-input-text: var(--input-text);
+    --color-modal-bg: var(--modal-bg);
+    --color-modal-border: var(--modal-border);
+    --color-modal-overlay: var(--modal-overlay);
+    --color-border: var(--border);
+    --color-border-strong: var(--border-strong);
 }
 
 body {

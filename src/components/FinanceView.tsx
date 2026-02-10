@@ -24,6 +24,7 @@ import {
 import "jspdf-autotable";
 import { getStudents, Student } from "../actions/studentActions";
 import { getLessons, CalendarEvent } from "../actions/calendarActions";
+import { ChartColors } from "../lib/chartColors";
 
 type TabType = "transactions" | "lessons" | "chart" | "invoice" | "annual";
 
@@ -409,16 +410,16 @@ export default function FinanceView() {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Month Selector */}
-                    <div className="flex items-center gap-2 bg-white/80 p-1.5 rounded-xl border border-pink-200">
-                        <button onClick={handlePrevMonth} className="p-2 hover:bg-pink-50 rounded-lg transition-colors">
-                            <ChevronLeft className="w-4 h-4 text-gray-600" />
+                    <div className="flex items-center gap-2 bg-card-solid p-1.5 rounded-xl border border-card-border">
+                        <button onClick={handlePrevMonth} className="p-2 hover:bg-accent-bg-hover rounded-lg transition-colors">
+                            <ChevronLeft className="w-4 h-4 text-t-secondary" />
                         </button>
-                        <span className="font-medium text-sm min-w-[100px] text-center text-gray-700">{formatMonthYear(selectedDate)}</span>
-                        <button onClick={handleNextMonth} className="p-2 hover:bg-pink-50 rounded-lg transition-colors">
-                            <ChevronRight className="w-4 h-4 text-gray-600" />
+                        <span className="font-medium text-sm min-w-[100px] text-center text-t-primary">{formatMonthYear(selectedDate)}</span>
+                        <button onClick={handleNextMonth} className="p-2 hover:bg-accent-bg-hover rounded-lg transition-colors">
+                            <ChevronRight className="w-4 h-4 text-t-secondary" />
                         </button>
                     </div>
-                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-pink-50 border border-pink-200 rounded-xl font-medium text-gray-700">
+                    <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 bg-card-solid hover:bg-accent-bg-hover border border-card-border rounded-xl font-medium text-t-primary">
                         <Download className="w-4 h-4" />CSV出力
                     </button>
                     <button onClick={() => { setEditingTransaction(null); setAddType("expense"); setIsAddModalOpen(true); }} className="flex items-center gap-2 px-5 py-2.5 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl">
@@ -428,20 +429,20 @@ export default function FinanceView() {
             </header>
 
             {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-white/80 rounded-xl w-fit border border-pink-200">
-                <button onClick={() => setActiveTab("transactions")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "transactions" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+            <div className="flex gap-2 p-1 bg-card-solid rounded-xl w-fit border border-card-border overflow-x-auto max-w-full">
+                <button onClick={() => setActiveTab("transactions")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium whitespace-nowrap ${activeTab === "transactions" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <Wallet className="w-4 h-4" />取引一覧
                 </button>
-                <button onClick={() => setActiveTab("lessons")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "lessons" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                <button onClick={() => setActiveTab("lessons")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium whitespace-nowrap ${activeTab === "lessons" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <Receipt className="w-4 h-4" />レッスン料管理
                 </button>
-                <button onClick={() => setActiveTab("chart")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "chart" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                <button onClick={() => setActiveTab("chart")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium whitespace-nowrap ${activeTab === "chart" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <BarChart3 className="w-4 h-4" />グラフ
                 </button>
-                <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "invoice" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium whitespace-nowrap ${activeTab === "invoice" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <FileDown className="w-4 h-4" />請求書
                 </button>
-                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium ${activeTab === "annual" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium whitespace-nowrap ${activeTab === "annual" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <FileDown className="w-4 h-4" />年間レポート
                 </button>
             </div>
@@ -467,7 +468,7 @@ export default function FinanceView() {
                 <>
                     <div className="flex gap-2">
                         {(["all", "income", "expense"] as const).map((type) => (
-                            <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-2 rounded-lg font-medium text-sm ${filterType === type ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                            <button key={type} onClick={() => setFilterType(type)} className={`px-4 py-2 rounded-lg font-medium text-sm ${filterType === type ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                                 {type === "all" ? "すべて" : type === "income" ? "収入" : "支出"}
                             </button>
                         ))}
@@ -475,23 +476,23 @@ export default function FinanceView() {
 
                     <div className="glass-card divide-y divide-pink-100">
                         {filteredTransactions.length === 0 ? (
-                            <div className="p-8 text-center text-gray-400">この月の取引はありません</div>
+                            <div className="p-8 text-center text-t-muted">この月の取引はありません</div>
                         ) : (
                             filteredTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((tx) => (
-                                <div key={tx.id} className="p-4 flex items-center gap-4 hover:bg-pink-50 group">
+                                <div key={tx.id} className="p-4 flex items-center gap-4 hover:bg-accent-bg-hover group transition-colors">
                                     <div className={`p-2.5 rounded-xl ${tx.type === "income" ? "bg-emerald-100" : "bg-rose-100"}`}>
                                         {tx.type === "income" ? <TrendingUp className="w-5 h-5 text-emerald-600" /> : <TrendingDown className="w-5 h-5 text-rose-600" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="font-medium truncate text-gray-700">{tx.description}</p>
-                                        <p className="text-sm text-gray-500">{tx.category}{tx.studentName && ` • ${tx.studentName}`}</p>
+                                        <p className="font-medium truncate text-t-primary">{tx.description}</p>
+                                        <p className="text-sm text-t-secondary">{tx.category}{tx.studentName && ` • ${tx.studentName}`}</p>
                                     </div>
                                     <div className="text-right">
                                         <p className={`font-semibold ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>{tx.type === "income" ? "+" : "-"}¥{tx.amount.toLocaleString()}</p>
-                                        <p className="text-xs text-gray-500">{tx.date}</p>
+                                        <p className="text-xs text-t-muted">{tx.date}</p>
                                     </div>
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => handleEditTransaction(tx)} className="p-2 hover:bg-gray-100 rounded-lg"><Pencil className="w-4 h-4 text-gray-600" /></button>
+                                        <button onClick={() => handleEditTransaction(tx)} className="p-2 hover:bg-card-border rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
                                         <button onClick={() => handleDeleteTransaction(tx.id)} className="p-2 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                                     </div>
                                 </div>
@@ -515,10 +516,10 @@ export default function FinanceView() {
                                     )}
                                 </p>
                             </div>
-                            <div className="flex gap-2 p-1 bg-pink-50 rounded-xl">
+                            <div className="flex gap-2 p-1 bg-accent-bg rounded-xl">
                                 <button
                                     onClick={() => setLessonViewMode("monthly")}
-                                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${lessonViewMode === "monthly" ? "bg-pink-100 text-pink-600" : "text-gray-600 hover:bg-pink-50"
+                                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${lessonViewMode === "monthly" ? "bg-accent text-white" : "text-t-secondary hover:bg-accent-bg-hover"
                                         }`}
                                 >
                                     <div className="flex items-center gap-2">
@@ -528,7 +529,7 @@ export default function FinanceView() {
                                 </button>
                                 <button
                                     onClick={() => setLessonViewMode("per-lesson")}
-                                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${lessonViewMode === "per-lesson" ? "bg-pink-100 text-pink-600" : "text-gray-600 hover:bg-pink-50"
+                                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${lessonViewMode === "per-lesson" ? "bg-accent text-white" : "text-t-secondary hover:bg-accent-bg-hover"
                                         }`}
                                 >
                                     <div className="flex items-center gap-2">
@@ -555,15 +556,15 @@ export default function FinanceView() {
                                             className={`p-2.5 rounded-lg transition-colors ${payment.paid ? "bg-emerald-100 hover:bg-emerald-200" : "bg-gray-100 hover:bg-gray-200"
                                                 } ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                         >
-                                            {payment.paid ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-gray-400" />}
+                                            {payment.paid ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-t-muted" />}
                                         </button>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`font-medium ${payment.paid ? "text-gray-600 line-through" : "text-gray-800"}`}>{payment.studentName}</p>
-                                            <p className="text-sm text-gray-500">月謝 {payment.year}年{payment.month}月分</p>
+                                            <p className={`font-medium ${payment.paid ? "text-t-muted line-through" : "text-t-primary"}`}>{payment.studentName}</p>
+                                            <p className="text-sm text-t-secondary">月謝 {payment.year}年{payment.month}月分</p>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-500">¥</span>
+                                                <span className="text-sm text-t-secondary">¥</span>
                                                 <input
                                                     type="number"
                                                     defaultValue={payment.amount || ""}
@@ -579,7 +580,7 @@ export default function FinanceView() {
                                                         }
                                                     }}
                                                     disabled={isSaving}
-                                                    className={`w-28 px-3 py-2 bg-white border border-pink-200 rounded-lg text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300 ${isSaving ? "opacity-50 cursor-not-allowed" : ""
+                                                    className={`w-28 px-3 py-2 bg-input-bg border border-input-border rounded-lg text-right font-medium text-input-text focus:outline-none focus:ring-2 focus:ring-accent ${isSaving ? "opacity-50 cursor-not-allowed" : ""
                                                         }`}
                                                     placeholder="金額"
                                                     min="0"
@@ -609,17 +610,17 @@ export default function FinanceView() {
                                             className={`p-2.5 rounded-lg transition-colors ${payment.paid ? "bg-emerald-100 hover:bg-emerald-200" : "bg-gray-100 hover:bg-gray-200"
                                                 } ${isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                         >
-                                            {payment.paid ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-gray-400" />}
+                                            {payment.paid ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-t-muted" />}
                                         </button>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`font-medium ${payment.paid ? "text-gray-600 line-through" : "text-gray-800"}`}>{payment.studentName}</p>
-                                            <p className="text-sm text-gray-500">
+                                            <p className={`font-medium ${payment.paid ? "text-t-muted line-through" : "text-t-primary"}`}>{payment.studentName}</p>
+                                            <p className="text-sm text-t-secondary">
                                                 {new Date(payment.lessonDate).toLocaleDateString("ja-JP", { month: "short", day: "numeric", weekday: "short" })}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-sm text-gray-500">¥</span>
+                                                <span className="text-sm text-t-secondary">¥</span>
                                                 <input
                                                     type="number"
                                                     defaultValue={payment.amount || ""}
@@ -635,7 +636,7 @@ export default function FinanceView() {
                                                         }
                                                     }}
                                                     disabled={isSaving}
-                                                    className={`w-28 px-3 py-2 bg-white border border-pink-200 rounded-lg text-right font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300 ${isSaving ? "opacity-50 cursor-not-allowed" : ""
+                                                    className={`w-28 px-3 py-2 bg-input-bg border border-input-border rounded-lg text-right font-medium text-input-text focus:outline-none focus:ring-2 focus:ring-accent ${isSaving ? "opacity-50 cursor-not-allowed" : ""
                                                         }`}
                                                     placeholder="金額"
                                                     min="0"
@@ -657,21 +658,21 @@ export default function FinanceView() {
 
             {activeTab === "chart" && (
                 <div className="glass-card p-6">
-                    <h3 className="font-semibold text-lg mb-6 text-gray-700">過去6ヶ月の収支推移</h3>
+                    <h3 className="font-semibold text-lg mb-6 text-t-primary">過去6ヶ月の収支推移</h3>
                     <div className="h-80">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#ffc9d9" />
-                                <XAxis dataKey="month" stroke="#6b7280" />
-                                <YAxis stroke="#6b7280" tickFormatter={(value) => `¥${(value / 1000).toFixed(0)}k`} />
+                                <CartesianGrid strokeDasharray="3 3" stroke={ChartColors.grid} />
+                                <XAxis dataKey="month" stroke={ChartColors.axis} />
+                                <YAxis stroke={ChartColors.axis} tickFormatter={(value) => `¥${(value / 1000).toFixed(0)}k`} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #ffc9d9", borderRadius: "12px" }}
-                                    labelStyle={{ color: "#374151" }}
+                                    contentStyle={{ backgroundColor: ChartColors.tooltip.bg, border: `1px solid ${ChartColors.tooltip.border}`, borderRadius: "12px", color: ChartColors.tooltip.text }}
+                                    labelStyle={{ color: ChartColors.tooltip.text }}
                                     formatter={(value) => [`¥${Number(value).toLocaleString()}`, ""]}
                                 />
                                 <Legend />
-                                <Bar dataKey="income" name="収入" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="expense" name="支出" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="income" name="収入" fill={ChartColors.success} radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="expense" name="支出" fill={ChartColors.danger} radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -683,21 +684,21 @@ export default function FinanceView() {
                     <h3 className="font-semibold text-lg mb-6 text-gray-700">PDF請求書を生成</h3>
                     <div className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-2">生徒を選択</label>
-                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                            <label className="block text-sm font-medium text-t-secondary mb-2">生徒を選択</label>
+                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                 <option value="">選択してください</option>
                                 {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-2">対象月</label>
-                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                            <label className="block text-sm font-medium text-t-secondary mb-2">対象月</label>
+                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => <option key={m} value={m}>{m}月</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-600 mb-2">金額</label>
-                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
+                            <label className="block text-sm font-medium text-t-secondary mb-2">金額</label>
+                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
                         </div>
                         <button onClick={generateInvoicePDF} disabled={!invoiceStudent} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
                             <FileDown className="w-5 h-5" />PDFをダウンロード
@@ -710,9 +711,9 @@ export default function FinanceView() {
             {activeTab === "annual" && annualSummary && (
                 <div className="glass-card p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold text-gray-700">年間収支レポート（確定申告用）</h3>
+                        <h3 className="text-xl font-bold text-t-primary">年間収支レポート（確定申告用）</h3>
                         <div className="flex gap-4">
-                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-white border border-pink-200 rounded-lg text-gray-700">
+                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-input-bg border border-input-border rounded-lg text-t-primary">
                                 {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}年</option>)}
                             </select>
                             <button onClick={generateAnnualReportPDF} className="px-4 py-2 premium-gradient rounded-lg text-white font-medium shadow-lg">
@@ -786,41 +787,41 @@ export default function FinanceView() {
             {/* Add/Edit Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingTransaction(null); }} />
-                    <div className="relative z-10 w-full max-w-md bg-white border border-pink-200 rounded-3xl p-8 shadow-2xl">
-                        <button onClick={() => { setIsAddModalOpen(false); setEditingTransaction(null); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingTransaction(null); }} />
+                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                        <button onClick={() => { setIsAddModalOpen(false); setEditingTransaction(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingTransaction ? "取引を編集" : "収支を記録"}</h3>
-                        <div className="flex gap-2 p-1 bg-pink-50 rounded-xl mb-6">
-                            <button type="button" onClick={() => setAddType("income")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "income" ? "bg-emerald-100 text-emerald-700" : "text-gray-600"}`}>収入</button>
-                            <button type="button" onClick={() => setAddType("expense")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "expense" ? "bg-rose-100 text-rose-700" : "text-gray-600"}`}>支出</button>
+                        <div className="flex gap-2 p-1 bg-accent-bg rounded-xl mb-6">
+                            <button type="button" onClick={() => setAddType("income")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "income" ? "bg-emerald-100 text-emerald-700" : "text-t-secondary hover:bg-accent-bg-hover"}`}>収入</button>
+                            <button type="button" onClick={() => setAddType("expense")} className={`flex-1 py-2.5 rounded-lg font-medium ${addType === "expense" ? "bg-rose-100 text-rose-700" : "text-t-secondary hover:bg-accent-bg-hover"}`}>支出</button>
                         </div>
                         <form onSubmit={handleAddOrUpdateTransaction} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">日付</label>
-                                <input name="date" type="date" defaultValue={editingTransaction?.date ? new Date(editingTransaction.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">日付</label>
+                                <input name="date" type="date" defaultValue={editingTransaction?.date ? new Date(editingTransaction.date).toISOString().split("T")[0] : new Date().toISOString().split("T")[0]} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">カテゴリ</label>
-                                <select name="category" defaultValue={editingTransaction?.category} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                <label className="block text-sm font-medium text-t-secondary mb-2">カテゴリ</label>
+                                <select name="category" defaultValue={editingTransaction?.category} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                     {addType === "income" ? <option value="月謝">月謝</option> : <><option value="交通費">交通費</option><option value="教材">教材</option><option value="その他">その他</option></>}
                                 </select>
                             </div>
                             {addType === "income" && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">生徒名</label>
-                                    <select name="studentName" defaultValue={editingTransaction?.studentName || ""} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">生徒名</label>
+                                    <select name="studentName" defaultValue={editingTransaction?.studentName || ""} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                         <option value="">選択してください</option>
                                         {students.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
                                     </select>
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">内容</label>
-                                <input name="description" required defaultValue={editingTransaction?.description} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder={addType === "income" ? "例: 2月分月謝" : "例: 清澄白河 往復"} />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">内容</label>
+                                <input name="description" required defaultValue={editingTransaction?.description} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder={addType === "income" ? "例: 2月分月謝" : "例: 清澄白河 往復"} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">金額</label>
-                                <input name="amount" type="number" required defaultValue={editingTransaction?.amount} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 12000" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">金額</label>
+                                <input name="amount" type="number" required defaultValue={editingTransaction?.amount} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: 12000" />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 rounded-xl font-bold text-white shadow-lg ${addType === "income" ? "bg-gradient-to-r from-emerald-500 to-green-600" : "bg-gradient-to-r from-rose-500 to-red-600"} ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>
                                 {isSaving ? "保存中..." : (editingTransaction ? "更新する" : "記録する")}

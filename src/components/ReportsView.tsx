@@ -171,11 +171,11 @@ export default function ReportsView() {
             </header>
 
             {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-white/80 rounded-xl w-fit flex-wrap border border-pink-200">
-                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+            <div className="flex gap-2 p-1 bg-card-solid rounded-xl w-fit flex-wrap border border-card-border">
+                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <Sparkles className="w-4 h-4" />報告作成
                 </button>
-                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <History className="w-4 h-4" />送信履歴
                 </button>
             </div>
@@ -185,18 +185,18 @@ export default function ReportsView() {
                     <div className="space-y-6">
                         {/* Student selector */}
                         <div className="glass-card p-6">
-                            <label className="block text-sm font-medium text-gray-600 mb-3">生徒を選択</label>
+                            <label className="block text-sm font-medium text-t-secondary mb-3">生徒を選択</label>
                             {students.length === 0 ? (
-                                <p className="text-gray-400 text-sm">生徒データがありません</p>
+                                <p className="text-t-muted text-sm">生徒データがありません</p>
                             ) : (
                                 <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2">
                                     {students.map((student) => {
                                         const activePiece = student.pieces.find((p) => p.status === "active");
                                         return (
-                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-pink-100 border border-pink-300" : "bg-white border border-pink-200 hover:bg-pink-50"}`}>
-                                                <p className="font-medium text-gray-700">{student.name}</p>
+                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-accent-bg border border-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}>
+                                                <p className="font-medium text-t-primary">{student.name}</p>
                                                 {activePiece && (
-                                                    <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
+                                                    <p className="text-sm text-t-secondary flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
                                                 )}
                                             </button>
                                         );
@@ -208,13 +208,13 @@ export default function ReportsView() {
                         {/* Template selector replacement: Modular selectors */}
                         <div className="glass-card p-6 space-y-6">
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-3">1. 本文を選択</label>
+                                <label className="block text-sm font-medium text-t-secondary mb-3">1. 本文を選択</label>
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                                     {BODY_SENTENCES.map((text, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setSelectedBody(text)}
-                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedBody === text ? "bg-pink-100 border border-pink-300 ring-1 ring-pink-300" : "bg-white border border-pink-200 hover:bg-pink-50"}`}
+                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedBody === text ? "bg-accent-bg border border-accent ring-1 ring-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}
                                         >
                                             {text}
                                         </button>
@@ -223,13 +223,13 @@ export default function ReportsView() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-3">2. 締めを選択</label>
+                                <label className="block text-sm font-medium text-t-secondary mb-3">2. 締めを選択</label>
                                 <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                                     {CLOSING_SENTENCES.map((text, idx) => (
                                         <button
                                             key={idx}
                                             onClick={() => setSelectedClosing(text)}
-                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedClosing === text ? "bg-pink-100 border border-pink-300 ring-1 ring-pink-300" : "bg-white border border-pink-200 hover:bg-pink-50"}`}
+                                            className={`w-full p-3 rounded-xl text-left text-sm transition-colors ${selectedClosing === text ? "bg-accent-bg border border-accent ring-1 ring-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}
                                         >
                                             {text}
                                         </button>
@@ -241,28 +241,29 @@ export default function ReportsView() {
                         {/* Custom inputs */}
                         <div className="glass-card p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">今日良かった点</label>
+                                <label className="block text-sm font-medium text-t-secondary mb-2">今日良かった点</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="flex-1 px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400" placeholder="例: テンポが安定していた" />
-                                    <button onClick={() => handleShuffle("goodPoints")} className="p-3 bg-pink-100 hover:bg-pink-200 text-pink-600 rounded-xl transition-colors" title="ランダムに入力">
+                                    <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: テンポが安定していた" />
+                                    {/* Using direct colors for sparkle button to keep it distinctive or use accent */}
+                                    <button onClick={() => handleShuffle("goodPoints")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
                                         <Sparkles className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">次回の目標</label>
+                                <label className="block text-sm font-medium text-t-secondary mb-2">次回の目標</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="flex-1 px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400" placeholder="例: 表現力を意識する" />
-                                    <button onClick={() => handleShuffle("nextGoals")} className="p-3 bg-pink-100 hover:bg-pink-200 text-pink-600 rounded-xl transition-colors" title="ランダムに入力">
+                                    <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: 表現力を意識する" />
+                                    <button onClick={() => handleShuffle("nextGoals")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
                                         <Sparkles className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">アドバイス</label>
+                                <label className="block text-sm font-medium text-t-secondary mb-2">アドバイス</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={adviceText} onChange={(e) => setAdviceText(e.target.value)} className="flex-1 px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400" placeholder="例: 片手ずつ練習しましょう" />
-                                    <button onClick={() => handleShuffle("advice")} className="p-3 bg-pink-100 hover:bg-pink-200 text-pink-600 rounded-xl transition-colors" title="ランダムに入力">
+                                    <input type="text" value={adviceText} onChange={(e) => setAdviceText(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: 片手ずつ練習しましょう" />
+                                    <button onClick={() => handleShuffle("advice")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
                                         <Sparkles className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -273,36 +274,36 @@ export default function ReportsView() {
                     {/* Preview */}
                     <div className="glass-card p-6 flex flex-col">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-lg text-gray-700">プレビュー</h3>
-                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedBody || !selectedClosing} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-emerald-100 text-emerald-700" : "bg-pink-100 text-pink-600 hover:bg-pink-200 disabled:opacity-50 disabled:cursor-not-allowed"}`}>
+                            <h3 className="font-semibold text-lg text-t-primary">プレビュー</h3>
+                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedBody || !selectedClosing} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-success-bg text-emerald-700" : "bg-accent-bg text-accent hover:bg-accent-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"}`}>
                                 {copied ? <><Check className="w-4 h-4" />コピーしました</> : <><Copy className="w-4 h-4" />コピー</>}
                             </button>
                         </div>
-                        <div className="flex-1 bg-white border border-pink-200 rounded-xl p-5 whitespace-pre-wrap text-gray-700 leading-relaxed">{generateMessage()}</div>
-                        <p className="text-sm text-gray-500 mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
+                        <div className="flex-1 bg-card-solid border border-card-border rounded-xl p-5 whitespace-pre-wrap text-t-primary leading-relaxed">{generateMessage()}</div>
+                        <p className="text-sm text-t-muted mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
                     </div>
                 </div>
             )}
 
             {activeTab === "history" && (
                 <div className="glass-card">
-                    <div className="p-5 border-b border-pink-100">
-                        <h3 className="font-semibold text-lg text-gray-700">送信履歴</h3>
+                    <div className="p-5 border-b border-card-border">
+                        <h3 className="font-semibold text-lg text-t-primary">送信履歴</h3>
                     </div>
                     {loadingHistory ? (
-                        <div className="p-8 text-center text-gray-400">読み込み中...</div>
+                        <div className="p-8 text-center text-t-muted">読み込み中...</div>
                     ) : reportHistory.length === 0 ? (
-                        <div className="p-8 text-center text-gray-400">送信履歴はありません</div>
+                        <div className="p-8 text-center text-t-muted">送信履歴はありません</div>
                     ) : (
-                        <div className="divide-y divide-pink-100 max-h-[600px] overflow-y-auto">
+                        <div className="divide-y divide-card-border max-h-[600px] overflow-y-auto">
                             {reportHistory.map((record) => (
                                 <div key={record.id} className="p-5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="font-medium text-gray-700">{record.studentName}</p>
-                                        <span className="text-sm text-gray-500">{record.date}</span>
+                                        <p className="font-medium text-t-primary">{record.studentName}</p>
+                                        <span className="text-sm text-t-secondary">{record.date}</span>
                                     </div>
-                                    <p className="text-xs text-pink-500 mb-2">{record.templateLabel}</p>
-                                    <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">{record.message}</p>
+                                    <p className="text-xs text-accent mb-2">{record.templateLabel}</p>
+                                    <p className="text-sm text-t-secondary whitespace-pre-wrap line-clamp-3">{record.message}</p>
                                 </div>
                             ))}
                         </div>

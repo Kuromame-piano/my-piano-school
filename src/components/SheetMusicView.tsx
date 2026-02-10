@@ -91,33 +91,33 @@ export default function SheetMusicView() {
 
             {/* Search */}
             <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input type="text" placeholder="曲名・作曲者で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-white border border-pink-200 rounded-xl text-gray-700 placeholder:text-gray-400 focus:border-pink-400" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-t-muted" />
+                <input type="text" placeholder="曲名・作曲者で検索..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3.5 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Music List */}
                 <div className="lg:col-span-2 space-y-3">
                     {loading ? (
-                        <div className="text-center py-12 text-gray-400">読み込み中...</div>
+                        <div className="text-center py-12 text-t-muted">読み込み中...</div>
                     ) : filteredMusic.length === 0 ? (
                         <div className="glass-card p-12 text-center">
-                            <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                            <p className="text-gray-500">楽譜がまだ登録されていません</p>
+                            <Music className="w-12 h-12 text-t-muted mx-auto mb-4" />
+                            <p className="text-t-secondary">楽譜がまだ登録されていません</p>
                         </div>
                     ) : (
                         filteredMusic.map((music) => (
-                            <button key={music.id} onClick={() => handleSelectMusic(music)} className={`w-full glass-card p-5 text-left hover:bg-pink-50 transition-all ${selectedMusic?.id === music.id ? "ring-2 ring-pink-400" : ""}`}>
+                            <button key={music.id} onClick={() => handleSelectMusic(music)} className={`w-full glass-card p-5 text-left hover:bg-accent-bg-hover transition-all ${selectedMusic?.id === music.id ? "ring-2 ring-accent" : ""}`}>
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-pink-100 rounded-xl">
-                                            <Music className="w-6 h-6 text-pink-500" />
+                                        <div className="p-3 bg-accent-bg rounded-xl">
+                                            <Music className="w-6 h-6 text-accent" />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-lg text-gray-700">{music.title}</h3>
-                                            <p className="text-sm text-gray-500">{music.composer}</p>
+                                            <h3 className="font-semibold text-lg text-t-primary">{music.title}</h3>
+                                            <p className="text-sm text-t-secondary">{music.composer}</p>
                                             <div className="flex items-center gap-3 mt-2">
-                                                <span className="text-xs px-2 py-1 bg-pink-100 rounded-full text-pink-600">{music.genre}</span>
+                                                <span className="text-xs px-2 py-1 bg-accent-bg rounded-full text-accent">{music.genre}</span>
                                                 <div className="flex">{getDifficultyStars(music.difficulty)}</div>
                                             </div>
                                         </div>
@@ -134,42 +134,42 @@ export default function SheetMusicView() {
                         <>
                             <div className="glass-card p-6">
                                 <div className="flex items-start justify-between mb-4">
-                                    <h3 className="font-bold text-xl text-gray-700">{selectedMusic.title}</h3>
+                                    <h3 className="font-bold text-xl text-t-primary">{selectedMusic.title}</h3>
                                     <div className="flex gap-2">
-                                        <button onClick={() => { setEditingMusic(selectedMusic); setIsAddModalOpen(true); }} className="p-2 hover:bg-gray-100 rounded-lg"><Pencil className="w-4 h-4 text-gray-600" /></button>
-                                        <button onClick={() => handleDeleteMusic(selectedMusic.id)} className="p-2 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
+                                        <button onClick={() => { setEditingMusic(selectedMusic); setIsAddModalOpen(true); }} className="p-2 hover:bg-accent-bg-hover rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
+                                        <button onClick={() => handleDeleteMusic(selectedMusic.id)} className="p-2 hover:bg-danger-bg rounded-lg"><Trash2 className="w-4 h-4 text-danger" /></button>
                                     </div>
                                 </div>
                                 <div className="space-y-3 text-sm">
-                                    <p className="flex items-center gap-2 text-gray-700"><User className="w-4 h-4 text-gray-500" />{selectedMusic.composer}</p>
-                                    <div className="flex items-center gap-2"><Star className="w-4 h-4 text-gray-500" />{getDifficultyStars(selectedMusic.difficulty)}</div>
-                                    <p className="flex items-center gap-2 text-gray-700"><FileText className="w-4 h-4 text-gray-500" />{selectedMusic.genre}</p>
+                                    <p className="flex items-center gap-2 text-t-primary"><User className="w-4 h-4 text-t-muted" />{selectedMusic.composer}</p>
+                                    <div className="flex items-center gap-2"><Star className="w-4 h-4 text-t-muted" />{getDifficultyStars(selectedMusic.difficulty)}</div>
+                                    <p className="flex items-center gap-2 text-t-primary"><FileText className="w-4 h-4 text-t-muted" />{selectedMusic.genre}</p>
                                     {selectedMusic.pdfUrl && (
-                                        <a href={selectedMusic.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-pink-500 hover:text-pink-600">
+                                        <a href={selectedMusic.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-accent hover:text-accent-hover">
                                             <ExternalLink className="w-4 h-4" />楽譜を開く
                                         </a>
                                     )}
                                 </div>
                                 {selectedMusic.notes && (
-                                    <p className="mt-4 pt-4 border-t border-pink-100 text-sm text-gray-600">{selectedMusic.notes}</p>
+                                    <p className="mt-4 pt-4 border-t border-card-border text-sm text-t-secondary">{selectedMusic.notes}</p>
                                 )}
                             </div>
 
                             {/* Info Card */}
-                            <div className="glass-card p-6 bg-blue-50 border-blue-200">
+                            <div className="glass-card p-6 bg-info-bg border-info">
                                 <div className="flex items-start gap-3">
-                                    <Library className="w-5 h-5 text-blue-500 mt-0.5" />
-                                    <div className="text-sm text-blue-700">
+                                    <Library className="w-5 h-5 text-info mt-0.5" />
+                                    <div className="text-sm text-info-dark">
                                         <p className="font-semibold mb-1">生徒への割り当てについて</p>
-                                        <p className="text-blue-600">この楽譜を生徒に割り当てるには、<span className="font-medium">生徒管理</span>画面から生徒を選択し、「練習中」または「教本」タブで追加してください。</p>
+                                        <p className="text-info-dark/80">この楽譜を生徒に割り当てるには、<span className="font-medium">生徒管理</span>画面から生徒を選択し、「練習中」または「教本」タブで追加してください。</p>
                                     </div>
                                 </div>
                             </div>
                         </>
                     ) : (
                         <div className="glass-card p-8 text-center">
-                            <Music className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-500">楽譜を選択してください</p>
+                            <Music className="w-10 h-10 text-t-muted mx-auto mb-3" />
+                            <p className="text-t-secondary">楽譜を選択してください</p>
                         </div>
                     )}
                 </div>
@@ -178,40 +178,40 @@ export default function SheetMusicView() {
             {/* Add/Edit Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} />
-                    <div className="relative z-10 w-full max-w-md bg-white border border-pink-200 rounded-3xl p-8 shadow-2xl">
-                        <button onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
+                    <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} />
+                    <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                        <button onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingMusic ? "楽譜を編集" : "新規楽譜"}</h3>
                         <form onSubmit={handleSaveMusic} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">曲名 <span className="text-red-500">*</span></label>
-                                <input name="title" required defaultValue={editingMusic?.title} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: エリーゼのために" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">曲名 <span className="text-danger">*</span></label>
+                                <input name="title" required defaultValue={editingMusic?.title} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: エリーゼのために" />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">作曲者</label>
-                                <input name="composer" defaultValue={editingMusic?.composer} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: ベートーヴェン" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">作曲者</label>
+                                <input name="composer" defaultValue={editingMusic?.composer} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: ベートーヴェン" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">難易度</label>
-                                    <select name="difficulty" defaultValue={editingMusic?.difficulty || 3} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">難易度</label>
+                                    <select name="difficulty" defaultValue={editingMusic?.difficulty || 3} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                         {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{"★".repeat(n)}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">ジャンル</label>
-                                    <select name="genre" defaultValue={editingMusic?.genre || "クラシック"} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">ジャンル</label>
+                                    <select name="genre" defaultValue={editingMusic?.genre || "クラシック"} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                         {genres.map((g) => <option key={g} value={g}>{g}</option>)}
                                     </select>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">PDF URL</label>
-                                <input name="pdfUrl" type="url" defaultValue={editingMusic?.pdfUrl} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="https://..." />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">PDF URL</label>
+                                <input name="pdfUrl" type="url" defaultValue={editingMusic?.pdfUrl} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="https://..." />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-2">メモ</label>
-                                <textarea name="notes" rows={2} defaultValue={editingMusic?.notes} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="練習ポイントなど..." />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">メモ</label>
+                                <textarea name="notes" rows={2} defaultValue={editingMusic?.notes} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="練習ポイントなど..." />
                             </div>
                             <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingMusic ? "更新する" : "追加する")}</button>
                         </form>

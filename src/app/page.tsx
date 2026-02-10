@@ -55,10 +55,10 @@ export default function Home() {
             />
             <main className="flex-1 overflow-y-auto">
                 {/* モバイル用ヘッダー */}
-                <header className="lg:hidden sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-pink-200 px-4 py-3 flex items-center gap-3 shadow-sm">
+                <header className="lg:hidden sticky top-0 z-30 bg-card/95 backdrop-blur-sm border-b border-card-border px-4 py-3 flex items-center gap-3 shadow-sm">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 text-gray-400 hover:text-pink-500 hover:bg-pink-50 rounded-lg"
+                        className="p-2 text-t-muted hover:text-accent hover:bg-accent-bg-hover rounded-lg"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
@@ -66,7 +66,7 @@ export default function Home() {
                         <div className="p-1.5 premium-gradient rounded-lg">
                             <Music className="w-4 h-4 text-white" />
                         </div>
-                        <span className="font-semibold text-sm text-gray-700">Piano Manager</span>
+                        <span className="font-semibold text-sm text-t-primary">Piano Manager</span>
                     </div>
                 </header>
 

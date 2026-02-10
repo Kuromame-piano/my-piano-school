@@ -55,19 +55,19 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
     return (
         <div className="relative w-full max-w-md mb-8 ml-auto" ref={wrapperRef}>
             <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-t-muted" />
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onFocus={() => setIsOpen(true)}
                     placeholder="生徒を検索..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-white border border-pink-200 rounded-xl text-sm text-gray-700 focus:border-pink-400 focus:bg-white transition-all placeholder:text-gray-400 shadow-sm"
+                    className="w-full pl-10 pr-4 py-2.5 bg-input-bg border border-input-border rounded-xl text-sm text-input-text focus:border-input-border-focus focus:bg-input-bg transition-all placeholder:text-t-placeholder shadow-sm"
                 />
                 {query && (
                     <button
                         onClick={() => setQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-pink-500"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-t-muted hover:text-accent"
                     >
                         <X className="w-3 h-3" />
                     </button>
@@ -75,18 +75,18 @@ export default function GlobalSearch({ onSelect }: GlobalSearchProps) {
             </div>
 
             {isOpen && query && filteredStudents.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-pink-200 rounded-xl shadow-xl overflow-hidden z-50">
-                    <div className="max-h-60 overflow-y-auto divide-y divide-pink-100">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-card-solid border border-card-border rounded-xl shadow-xl overflow-hidden z-50">
+                    <div className="max-h-60 overflow-y-auto divide-y divide-card-border">
                         {filteredStudents.map(student => (
                             <button
                                 key={student.id}
                                 onClick={() => handleSelect(student)}
-                                className="w-full text-left px-4 py-3 hover:bg-pink-50 transition-colors flex items-center gap-3"
+                                className="w-full text-left px-4 py-3 hover:bg-accent-bg-hover transition-colors flex items-center gap-3"
                             >
                                 <div className={`w-8 h-8 rounded-lg ${student.color} flex items-center justify-center text-white text-xs font-bold`}>
                                     {student.name[0]}
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{student.name}</span>
+                                <span className="text-sm font-medium text-t-primary">{student.name}</span>
                             </button>
                         ))}
                     </div>

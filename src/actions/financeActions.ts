@@ -229,7 +229,7 @@ export async function getTuitionPayments(year: number, month: number): Promise<T
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${TUITION_SHEET}!A2:F`,
+            range: `'${TUITION_SHEET}'!A2:G`,
         });
 
         const rows = response.data.values;
@@ -260,7 +260,7 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
         // Check if record exists
         const existingPayments = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${TUITION_SHEET}!A2:F`,
+            range: `'${TUITION_SHEET}'!A2:G`,
         });
 
         const rows = existingPayments.data.values || [];
@@ -286,7 +286,7 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${TUITION_SHEET}!A${rowNumber}:G${rowNumber}`,
+                range: `'${TUITION_SHEET}'!A${rowNumber}:G${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],
@@ -296,7 +296,7 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
             // Append
             await sheets.spreadsheets.values.append({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${TUITION_SHEET}!A:A`,
+                range: `'${TUITION_SHEET}'!A:A`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],

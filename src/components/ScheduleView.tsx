@@ -243,7 +243,7 @@ export default function ScheduleView() {
     };
 
     const dayNames = ["月", "火", "水", "木", "金", "土", "日"];
-    const colors = ["bg-pink-500", "bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-violet-500"];
+    const colors = ["bg-accent", "bg-info", "bg-success", "bg-warning", "bg-violet-500"];
 
     // Mini calendar functions
     const getMiniCalendarDays = () => {
@@ -341,20 +341,20 @@ export default function ScheduleView() {
                 {/* Mini Calendar */}
                 <div className="glass-card p-1.5 w-full max-w-[220px] mx-auto lg:mx-0">
                     <div className="flex items-center justify-between mb-1.5 px-0.5">
-                        <button onClick={handleMiniCalendarPrev} className="p-0.5 hover:bg-pink-50 rounded transition-colors">
-                            <ChevronLeft className="w-2.5 h-2.5 text-gray-600" />
+                        <button onClick={handleMiniCalendarPrev} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
+                            <ChevronLeft className="w-2.5 h-2.5 text-t-secondary" />
                         </button>
-                        <h3 className="font-semibold text-xs text-gray-700">
+                        <h3 className="font-semibold text-xs text-t-primary">
                             {miniCalendarDate.getMonth() + 1}月 {miniCalendarDate.getFullYear()}
                         </h3>
-                        <button onClick={handleMiniCalendarNext} className="p-0.5 hover:bg-pink-50 rounded transition-colors">
-                            <ChevronRight className="w-2.5 h-2.5 text-gray-600" />
+                        <button onClick={handleMiniCalendarNext} className="p-0.5 hover:bg-accent-bg-hover rounded transition-colors">
+                            <ChevronRight className="w-2.5 h-2.5 text-t-secondary" />
                         </button>
                     </div>
 
                     <div className="grid grid-cols-7 gap-px mb-0.5">
                         {["月", "火", "水", "木", "金", "土", "日"].map((day, i) => (
-                            <div key={i} className="text-center text-[8px] font-medium text-gray-400">
+                            <div key={i} className="text-center text-[8px] font-medium text-t-muted">
                                 {day}
                             </div>
                         ))}
@@ -372,14 +372,14 @@ export default function ScheduleView() {
                                     onClick={() => handleMiniCalendarClick(dayInfo.date)}
                                     className={`
                                         relative aspect-square flex items-center justify-center rounded-sm text-[8px] transition-all
-                                        ${!dayInfo.isCurrentMonth ? "text-gray-300" : "text-gray-700"}
-                                        ${isToday ? "bg-pink-500 text-white font-bold hover:bg-pink-600" : "hover:bg-pink-50"}
-                                        ${isInCurrentWeek && !isToday ? "bg-pink-100 font-medium" : ""}
+                                        ${!dayInfo.isCurrentMonth ? "text-t-muted/50" : "text-t-primary"}
+                                        ${isToday ? "bg-accent text-white font-bold hover:bg-accent-hover" : "hover:bg-accent-bg-hover"}
+                                        ${isInCurrentWeek && !isToday ? "bg-accent-bg font-medium" : ""}
                                     `}
                                 >
                                     {dayInfo.date.getDate()}
                                     {eventCount > 0 && !isToday && (
-                                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 rounded-full bg-pink-500" />
+                                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 rounded-full bg-accent" />
                                     )}
                                 </button>
                             );
@@ -398,22 +398,22 @@ export default function ScheduleView() {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col gap-4 min-w-0">
-                <header className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-pink-100">
+                <header className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/50 backdrop-blur-sm p-4 rounded-2xl border border-card-border">
                     <div className="flex items-center gap-4">
-                        <h2 className="text-2xl font-bold text-gray-800">
+                        <h2 className="text-2xl font-bold text-t-primary">
                             {viewMode === "month" ? formatMonthYear(currentDate) : formatWeekRange(currentDate)}
                         </h2>
-                        <div className="flex items-center bg-white/80 rounded-lg border border-pink-200 p-0.5">
-                            <button onClick={handlePrev} className="p-1.5 hover:bg-pink-50 rounded-md transition-colors"><ChevronLeft className="w-4 h-4 text-gray-600" /></button>
-                            <button onClick={handleNext} className="p-1.5 hover:bg-pink-50 rounded-md transition-colors"><ChevronRight className="w-4 h-4 text-gray-600" /></button>
+                        <div className="flex items-center bg-card-solid rounded-lg border border-card-border p-0.5">
+                            <button onClick={handlePrev} className="p-1.5 hover:bg-accent-bg-hover rounded-md transition-colors"><ChevronLeft className="w-4 h-4 text-t-secondary" /></button>
+                            <button onClick={handleNext} className="p-1.5 hover:bg-accent-bg-hover rounded-md transition-colors"><ChevronRight className="w-4 h-4 text-t-secondary" /></button>
                         </div>
                     </div>
 
-                    <div className="flex gap-1 p-1 bg-white/80 rounded-xl border border-pink-200">
-                        <button onClick={() => setViewMode("month")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "month" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                    <div className="flex gap-1 p-1 bg-card-solid rounded-xl border border-card-border">
+                        <button onClick={() => setViewMode("month")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "month" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                             <Calendar className="w-4 h-4" />月
                         </button>
-                        <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "week" ? "bg-pink-100 text-pink-600" : "text-gray-500 hover:text-gray-700 hover:bg-pink-50"}`}>
+                        <button onClick={() => setViewMode("week")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors ${viewMode === "week" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                             <CalendarDays className="w-4 h-4" />週
                         </button>
                     </div>
@@ -427,19 +427,19 @@ export default function ScheduleView() {
                                 const dayEvents = getEventsForDay(day);
                                 const isToday = day.toDateString() === new Date().toDateString();
                                 return (
-                                    <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-pink-400" : ""}`}>
-                                        <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-pink-100">
-                                            <p className="text-xs sm:text-sm text-gray-500">{dayNames[i]}</p>
-                                            <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-pink-500" : "text-gray-700"}`}>{day.getDate()}</p>
+                                    <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-accent" : ""}`}>
+                                        <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-card-border">
+                                            <p className="text-xs sm:text-sm text-t-secondary">{dayNames[i]}</p>
+                                            <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-accent" : "text-t-primary"}`}>{day.getDate()}</p>
                                         </div>
                                         <div className="space-y-1.5 sm:space-y-2">
                                             {dayEvents.length === 0 ? (
-                                                <p className="text-xs text-gray-400 text-center py-2 sm:py-4">-</p>
+                                                <p className="text-xs text-t-muted text-center py-2 sm:py-4">-</p>
                                             ) : (
                                                 dayEvents.map((event, idx) => (
-                                                    <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-pink-50 transition-colors`}>
-                                                        <p className="text-[10px] sm:text-xs text-pink-500 mb-0.5">{formatTime(event.start)}</p>
-                                                        <p className="text-xs sm:text-sm font-medium truncate text-gray-700">{event.title}</p>
+                                                    <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-accent-bg-hover transition-colors`}>
+                                                        <p className="text-[10px] sm:text-xs text-accent mb-0.5">{formatTime(event.start)}</p>
+                                                        <p className="text-xs sm:text-sm font-medium truncate text-t-primary">{event.title}</p>
                                                     </button>
                                                 ))
                                             )}
@@ -454,22 +454,22 @@ export default function ScheduleView() {
                     {viewMode === "month" && (
                         <div className="h-full overflow-y-auto pr-2">
                             {events.length === 0 ? (
-                                <div className="glass-card p-12 text-center h-[300px] flex items-center justify-center"><p className="text-gray-400">この月の予定はありません</p></div>
+                                <div className="glass-card p-12 text-center h-[300px] flex items-center justify-center"><p className="text-t-muted">この月の予定はありません</p></div>
                             ) : (
                                 <div className="space-y-3">
                                     {events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()).map((event, index) => (
-                                        <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-4 flex gap-4 text-left hover:bg-pink-50 transition-all items-center">
+                                        <button key={event.id} onClick={() => setSelectedEvent(event)} className="w-full glass-card p-4 flex gap-4 text-left hover:bg-accent-bg-hover transition-all items-center">
                                             <div className="flex flex-col items-center min-w-[50px]">
-                                                <div className="text-xs text-gray-500">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
-                                                <div className="text-lg font-bold text-gray-700">{new Date(event.start).getDate()}</div>
+                                                <div className="text-xs text-t-secondary">{new Date(event.start).toLocaleDateString("ja-JP", { weekday: "short" })}</div>
+                                                <div className="text-lg font-bold text-t-primary">{new Date(event.start).getDate()}</div>
                                             </div>
-                                            <div className="w-0.5 h-10 bg-pink-200 mx-2" />
+                                            <div className="w-0.5 h-10 bg-accent/20 mx-2" />
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between gap-4">
-                                                    <h4 className="text-base font-semibold text-gray-700 truncate">{event.title}</h4>
-                                                    <span className="text-xs font-medium text-pink-600 bg-pink-100 px-2 py-0.5 rounded-full whitespace-nowrap">{formatTime(event.start)}</span>
+                                                    <h4 className="text-base font-semibold text-t-primary truncate">{event.title}</h4>
+                                                    <span className="text-xs font-medium text-accent bg-accent-bg px-2 py-0.5 rounded-full whitespace-nowrap">{formatTime(event.start)}</span>
                                                 </div>
-                                                {event.location && <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" />{event.location}</p>}
+                                                {event.location && <p className="text-xs text-t-secondary flex items-center gap-1 mt-1"><MapPin className="w-3 h-3" />{event.location}</p>}
                                             </div>
                                         </button>
                                     ))}
@@ -487,48 +487,48 @@ export default function ScheduleView() {
             {
                 selectedEvent && (
                     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
-                        <div className="relative z-10 w-full sm:max-w-md bg-white border border-pink-200 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom shadow-2xl">
-                            <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
+                        <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => setSelectedEvent(null)} />
+                        <div className="relative z-10 w-full sm:max-w-md bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 safe-area-bottom shadow-2xl">
+                            <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
 
                             <h3 className="text-2xl font-bold text-gradient mb-6">{selectedEvent.title}</h3>
 
                             <div className="space-y-5">
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 bg-pink-100 rounded-xl"><Clock className="w-5 h-5 text-pink-500" /></div>
+                                    <div className="p-3 bg-accent-bg rounded-xl"><Clock className="w-5 h-5 text-accent" /></div>
                                     <div>
-                                        <p className="text-sm text-gray-500 mb-1">日時</p>
-                                        <p className="font-semibold text-gray-700">{new Date(selectedEvent.start).toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" })}</p>
-                                        <p className="text-gray-600">{formatTime(selectedEvent.start)} 〜 {formatTime(selectedEvent.end)}</p>
+                                        <p className="text-sm text-t-secondary mb-1">日時</p>
+                                        <p className="font-semibold text-t-primary">{new Date(selectedEvent.start).toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" })}</p>
+                                        <p className="text-t-primary">{formatTime(selectedEvent.start)} 〜 {formatTime(selectedEvent.end)}</p>
                                     </div>
                                 </div>
 
                                 {selectedEvent.location && (
                                     <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-blue-100 rounded-xl"><MapPin className="w-5 h-5 text-blue-500" /></div>
+                                        <div className="p-3 bg-info-bg rounded-xl"><MapPin className="w-5 h-5 text-info" /></div>
                                         <div>
-                                            <p className="text-sm text-gray-500 mb-1">場所</p>
-                                            <p className="font-medium text-gray-700">{selectedEvent.location}</p>
+                                            <p className="text-sm text-t-secondary mb-1">場所</p>
+                                            <p className="font-medium text-t-primary">{selectedEvent.location}</p>
                                         </div>
                                     </div>
                                 )}
 
                                 {selectedEvent.description && (
                                     <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-emerald-100 rounded-xl"><AlignLeft className="w-5 h-5 text-emerald-500" /></div>
+                                        <div className="p-3 bg-success-bg rounded-xl"><AlignLeft className="w-5 h-5 text-success" /></div>
                                         <div>
-                                            <p className="text-sm text-gray-500 mb-1">詳細</p>
-                                            <p className="text-gray-700 whitespace-pre-wrap">{selectedEvent.description}</p>
+                                            <p className="text-sm text-t-secondary mb-1">詳細</p>
+                                            <p className="text-t-primary whitespace-pre-wrap">{selectedEvent.description}</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             <div className="flex gap-3 mt-8">
-                                <button onClick={() => openEditModal(selectedEvent)} className="flex-1 py-3 bg-white hover:bg-pink-50 border border-pink-200 rounded-xl font-medium text-gray-700 flex items-center justify-center gap-2">
+                                <button onClick={() => openEditModal(selectedEvent)} className="flex-1 py-3 bg-card-solid hover:bg-accent-bg-hover border border-card-border rounded-xl font-medium text-t-primary flex items-center justify-center gap-2">
                                     <Pencil className="w-4 h-4" />編集
                                 </button>
-                                <button onClick={() => handleDeleteEvent(selectedEvent.id)} className="flex-1 py-3 bg-rose-100 hover:bg-rose-200 rounded-xl font-medium text-rose-700 flex items-center justify-center gap-2">
+                                <button onClick={() => handleDeleteEvent(selectedEvent.id)} className="flex-1 py-3 bg-danger-bg hover:bg-danger-bg/80 rounded-xl font-medium text-danger flex items-center justify-center gap-2">
                                     <Trash2 className="w-4 h-4" />削除
                                 </button>
                             </div>
@@ -541,21 +541,21 @@ export default function ScheduleView() {
             {
                 isAddModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
-                        <div className="relative z-10 w-full max-w-md bg-white border border-pink-200 rounded-3xl p-8 shadow-2xl">
-                            <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-700"><X className="w-6 h-6" /></button>
+                        <div className="absolute inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} />
+                        <div className="relative z-10 w-full max-w-md bg-modal-bg border border-modal-border rounded-3xl p-8 shadow-2xl">
+                            <button onClick={() => { setIsAddModalOpen(false); setEditingEvent(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                             <h3 className="text-2xl font-bold text-gradient mb-6">{editingEvent ? "レッスンを編集" : "新規レッスン"}</h3>
                             <form onSubmit={handleSaveEvent} className="space-y-5">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">タイトル（生徒名など） <span className="text-red-500">*</span></label>
-                                    <input name="title" list="student-names" required defaultValue={editingEvent?.title} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 山田花子" />
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">タイトル（生徒名など） <span className="text-danger">*</span></label>
+                                    <input name="title" list="student-names" required defaultValue={editingEvent?.title} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: 山田花子" />
                                     <datalist id="student-names">
                                         {students.map(s => <option key={s.id} value={s.name} />)}
                                     </datalist>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">レッスン時間</label>
-                                    <select value={lessonDuration} onChange={handleDurationChange} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700">
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">レッスン時間</label>
+                                    <select value={lessonDuration} onChange={handleDurationChange} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                         <option value={30}>30分</option>
                                         <option value={45}>45分</option>
                                         <option value={60}>60分</option>
@@ -564,21 +564,21 @@ export default function ScheduleView() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-2">開始日時 <span className="text-red-500">*</span></label>
-                                        <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">開始日時 <span className="text-danger">*</span></label>
+                                        <input name="start" type="datetime-local" required value={startTime} onChange={handleStartTimeChange} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-600 mb-2">終了日時 <span className="text-red-500">*</span></label>
-                                        <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" />
+                                        <label className="block text-sm font-medium text-t-secondary mb-2">終了日時 <span className="text-danger">*</span></label>
+                                        <input name="end" type="datetime-local" required value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">場所</label>
-                                    <input name="location" defaultValue={editingEvent?.location} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="例: 自宅スタジオ" />
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">場所</label>
+                                    <input name="location" defaultValue={editingEvent?.location} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="例: 自宅スタジオ" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-600 mb-2">メモ</label>
-                                    <textarea name="description" rows={3} defaultValue={editingEvent?.description} className="w-full px-4 py-3 bg-white border border-pink-200 rounded-xl text-gray-700" placeholder="練習曲、注意点など..." />
+                                    <label className="block text-sm font-medium text-t-secondary mb-2">メモ</label>
+                                    <textarea name="description" rows={3} defaultValue={editingEvent?.description} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="練習曲、注意点など..." />
                                 </div>
                                 <button type="submit" disabled={saving} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50">
                                     {saving ? "保存中..." : (editingEvent ? "更新する" : "作成する")}
