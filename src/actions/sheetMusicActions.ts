@@ -6,8 +6,8 @@ export interface SheetMusic {
     id: number;
     title: string;
     composer: string;
-    difficulty: number; // 1-5
-    genre: string;
+    difficulty?: number; // 1-5, optional
+    genre?: string;      // optional
     pdfUrl?: string;
     notes?: string;
 }
@@ -39,7 +39,7 @@ export async function getSheetMusic(): Promise<SheetMusic[]> {
             id: Number(row[0]),
             title: row[1] || "",
             composer: row[2] || "",
-            difficulty: Number(row[3]) || 1,
+            difficulty: row[3] ? Number(row[3]) : undefined,
             genre: row[4] || "",
             pdfUrl: row[5] || "",
             notes: row[6] || "",

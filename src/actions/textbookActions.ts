@@ -180,3 +180,146 @@ export async function saveTextbookProgress(progress: TextbookProgress) {
         return { success: false, error };
     }
 }
+
+export async function updateTextbookCurrentPage(studentId: number, textbookId: number, currentPage: number) {
+    try {
+        const sheets = await getSheetsClient();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${PROGRESS_SHEET}!A2:G`,
+        });
+
+        const rows = response.data.values || [];
+        const existingIndex = rows.findIndex(
+            (row) => Number(row[0]) === studentId && Number(row[1]) === textbookId
+        );
+
+        if (existingIndex === -1) {
+            return { success: false, error: "Progress not found" };
+        }
+
+        const rowNumber = existingIndex + 2;
+        const existingRow = rows[existingIndex];
+        const rowData = [
+            studentId,
+            textbookId,
+            existingRow[2], // status
+            currentPage,
+            existingRow[4], // startDate
+            existingRow[5] || "", // completedDate
+            new Date().toISOString(), // lastUpdated
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${PROGRESS_SHEET}!A${rowNumber}:G${rowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+                values: [rowData],
+            },
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating textbook page:", error);
+        return { success: false, error };
+    }
+}
+
+export async function completeTextbook(studentId: number, textbookId: number) {
+    try {
+        const sheets = await getSheetsClient();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${PROGRESS_SHEET}!A2:G`,
+        });
+
+        const rows = response.data.values || [];
+        const existingIndex = rows.findIndex(
+            (row) => Number(row[0]) === studentId && Number(row[1]) === textbookId
+        );
+
+        if (existingIndex === -1) {
+            return { success: false, error: "Progress not found" };
+        }
+
+        const rowNumber = existingIndex + 2;
+        const existingRow = rows[existingIndex];
+        const textbooks = await getTextbooks();
+        const textbook = textbooks.find(t => t.id === textbookId);
+
+        const rowData = [
+            studentId,
+            textbookId,
+            "completed",
+            textbook?.totalPages || existingRow[3], // Set to total pages
+            existingRow[4], // startDate
+            new Date().toISOString(), // completedDate
+            new Date().toISOString(), // lastUpdated
+        ];
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${PROGRESS_SHEET}!A${rowNumber}:G${rowNumber}`,
+            valueInputOption: "USER_ENTERED",
+            requestBody: {
+                values: [rowData],
+            },
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error completing textbook:", error);
+        return { success: false, error };
+    }
+}
+
+export async function deleteTextbookProgress(studentId: number, textbookId: number) {
+    try {
+        const sheets = await getSheetsClient();
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${PROGRESS_SHEET}!A2:G`,
+        });
+
+        const rows = response.data.values || [];
+        const existingIndex = rows.findIndex(
+            (row) => Number(row[0]) === studentId && Number(row[1]) === textbookId
+        );
+
+        if (existingIndex === -1) {
+            return { success: false, error: "Progress not found" };
+        }
+
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID,
+        });
+
+        const progressSheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === PROGRESS_SHEET);
+        if (!progressSheet?.properties?.sheetId) {
+            return { success: false, error: "Sheet not found" };
+        }
+
+        const rowNumber = existingIndex + 2;
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+                requests: [
+                    {
+                        deleteDimension: {
+                            range: {
+                                sheetId: progressSheet.properties.sheetId,
+                                dimension: "ROWS",
+                                startIndex: rowNumber - 1,
+                                endIndex: rowNumber,
+                            },
+                        },
+                    },
+                ],
+            },
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting textbook progress:", error);
+        return { success: false, error };
+    }
+}
+

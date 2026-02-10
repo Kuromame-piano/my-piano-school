@@ -1,76 +1,128 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Check, Music, Sparkles, Plus, X, Pencil, Trash2, History, FileDown, Bell, Cake, AlertCircle } from "lucide-react";
-import { jsPDF } from "jspdf";
+import { Copy, Check, Music, Sparkles, Plus, X, Pencil, Trash2, History } from "lucide-react";
 import { getStudents, Student } from "../actions/studentActions";
-import { getTemplates, saveTemplate, updateTemplate, deleteTemplate, getReportHistory, saveReportHistory, ReportTemplate, ReportHistory } from "../actions/reportActions";
-import { getTuitionPayments, getAnnualSummary, TuitionPayment } from "../actions/financeActions";
-import "jspdf-autotable";
 
-type TabType = "report" | "history" | "notifications" | "invoice" | "annual";
+import { getReportHistory, saveReportHistory, ReportHistory } from "../actions/reportActions";
+
+type TabType = "report" | "history";
 
 export default function ReportsView() {
     const [students, setStudents] = useState<Student[]>([]);
-    const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-    const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
-    const [customText, setCustomText] = useState("");
-    const [nextGoal, setNextGoal] = useState("");
-    const [copied, setCopied] = useState(false);
+    const [selectedBody, setSelectedBody] = useState<string>("");
+    const [selectedClosing, setSelectedClosing] = useState<string>("");
     const [activeTab, setActiveTab] = useState<TabType>("report");
 
-    // Template editing
-    const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<ReportTemplate | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+    // Report fields
+    const [customText, setCustomText] = useState("");
+    const [nextGoal, setNextGoal] = useState("");
+    const [adviceText, setAdviceText] = useState("");
+    const [copied, setCopied] = useState(false);
 
+    // Auto-generated suggestions
+    const SUGGESTIONS = {
+        goodPoints: [
+            "リズム感が安定してきました",
+            "譜読みが早くなりました",
+            "指の形がとても綺麗です",
+            "強弱の表現が豊かになりました",
+            "集中して練習に取り組めました",
+            "難しいパッセージもスムーズに弾けました",
+            "左手の伴奏が安定してきました",
+            "ペダリングが上手になりました",
+            "テンポをキープできています",
+            "全体を通して流れが良くなりました"
+        ],
+        nextGoals: [
+            "指の形を意識しましょう",
+            "強弱記号に注意しましょう",
+            "スラーとスタッカートの弾き分けを大切に",
+            "手首の力を抜いて弾きましょう",
+            "テンポを一定に保つ練習をしましょう",
+            "左手の音量バランスに気をつけましょう",
+            "フレーズの終わりを丁寧に",
+            "休符しっかりと数えましょう",
+            "指番号を守って練習しましょう",
+            "暗譜に挑戦してみましょう"
+        ],
+        advice: [
+            "片手ずつの練習を大切に",
+            "メトロノームを使って練習しましょう",
+            "録音して自分の音を聴いてみましょう",
+            "難しい箇所はリズム変奏で練習すると良いです",
+            "最初はゆっくり、徐々にテンポを上げましょう",
+            "楽譜に書き込みをして注意点を忘れないように",
+            "練習の前に指の体操をすると良いですよ",
+            "毎日少しずつでもピアノに触れましょう",
+            "好きな曲を聴いてイメージを膨らませましょう",
+            "リラックスして演奏することを心がけましょう"
+        ]
+    };
+
+    const getRandomSuggestion = (category: keyof typeof SUGGESTIONS) => {
+        const list = SUGGESTIONS[category];
+        const randomIndex = Math.floor(Math.random() * list.length);
+        return list[randomIndex];
+    };
+
+    const handleShuffle = (category: keyof typeof SUGGESTIONS) => {
+        const suggestion = getRandomSuggestion(category);
+        if (category === "goodPoints") setCustomText(suggestion);
+        if (category === "nextGoals") setNextGoal(suggestion);
+        if (category === "advice") setAdviceText(suggestion);
+    };
+
+    // Body sentences (10 patterns)
+    const BODY_SENTENCES = [
+        "{曲名}、順調に進んでいます。特に{良かった点}が素晴らしかったです。",
+        "今日は{曲名}に集中して取り組みました。{良かった点}がとても良くなっていて、日々の練習の成果が出ていますね！",
+        "{曲名}、少し難しい箇所がありましたが、{良かった点}などの良い部分もたくさんありました。焦らず一緒に進めていきましょう。{アドバイス}",
+        "{曲名}の練習を通して、大きな成長が見られました！特に{良かった点}の上達が素晴らしいです。",
+        "{曲名}、もう少しで仕上がりそうですね。{良かった点}が特に良くなってきました。",
+        "今日から{曲名}に挑戦しましたね。初めてでしたが、{良かった点}が既にできていて素晴らしかったです。",
+        "{曲名}の練習で、リズム感がとても良くなってきましたね！{良かった点}も素晴らしかったです。",
+        "{曲名}、表現力が格段にアップしていますね！{良かった点}の表現が特に印象的でした。",
+        "今日は基礎練習を中心に行いました。{良かった点}がしっかりできていて、着実に力がついています。",
+        "発表会で演奏する{曲名}の練習を進めました。{良かった点}が特に良く、本番が楽しみです！"
+    ];
+
+    // Closing sentences (10 patterns)
+    const CLOSING_SENTENCES = [
+        "次回も{次回の目標}を中心に練習してみてください。引き続きよろしくお願いいたします！",
+        "次回のレッスンまでに{次回の目標}を意識して練習してみてくださいね。",
+        "次回は{次回の目標}から始めますね。引き続きよろしくお願いいたします！",
+        "この調子で、次は{次回の目標}にチャレンジしてみましょう。楽しみにしています！",
+        "仕上げとして{次回の目標}を意識して、丁寧に練習してみてください。",
+        "次回は{次回の目標}を中心に進めていきましょう！",
+        "引き続き{次回の目標}に取り組んでいきましょう。頑張ってください！",
+        "次回は{次回の目標}を意識して、さらに深みのある演奏を目指しましょう。",
+        "次回は{曲名}を使って{次回の目標}を確認していきますね。",
+        "{次回の目標}を中心に仕上げていきましょう。応援しています！"
+    ];
+
+    // Template editing - removed
     // History
     const [reportHistory, setReportHistory] = useState<ReportHistory[]>([]);
     const [loadingHistory, setLoadingHistory] = useState(false);
-
-    // Notifications
-    const [unpaidStudents, setUnpaidStudents] = useState<{ name: string; studentId: number }[]>([]);
-    const [birthdays, setBirthdays] = useState<{ name: string; date: string; daysUntil: number }[]>([]);
-
-    // Invoice
-    const [invoiceStudent, setInvoiceStudent] = useState<Student | null>(null);
-    const [invoiceAmount, setInvoiceAmount] = useState("10000");
-    const [invoiceMonth, setInvoiceMonth] = useState(new Date().getMonth() + 1);
-
-    // Annual Report
-    const [annualYear, setAnnualYear] = useState(new Date().getFullYear());
-    const [annualSummary, setAnnualSummary] = useState<{
-        totalIncome: number;
-        totalExpense: number;
-        expenseByCategory: { category: string; amount: number }[];
-        monthlyBreakdown: { month: string; income: number; expense: number }[];
-    } | null>(null);
 
     useEffect(() => {
         loadData();
     }, []);
 
     const loadData = async () => {
-        const [studentData, templateData] = await Promise.all([
-            getStudents(),
-            getTemplates(),
-        ]);
+        const studentData = await getStudents();
         setStudents(studentData);
-        setTemplates(templateData);
-        if (templateData.length > 0) setSelectedTemplate(templateData[0]);
+        // Default selections
+        if (BODY_SENTENCES.length > 0) setSelectedBody(BODY_SENTENCES[0]);
+        if (CLOSING_SENTENCES.length > 0) setSelectedClosing(CLOSING_SENTENCES[0]);
     };
 
     useEffect(() => {
         if (activeTab === "history") loadHistory();
-        if (activeTab === "notifications") loadNotifications();
-        if (activeTab === "annual") loadAnnualSummary();
-    }, [activeTab, annualYear]);
-
-    const loadAnnualSummary = async () => {
-        const summary = await getAnnualSummary(annualYear);
-        setAnnualSummary(summary);
-    };
+    }, [activeTab]);
 
     const loadHistory = async () => {
         setLoadingHistory(true);
@@ -79,49 +131,23 @@ export default function ReportsView() {
         setLoadingHistory(false);
     };
 
-    const loadNotifications = async () => {
-        const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        const currentYear = now.getFullYear();
-
-        // Check unpaid tuition
-        const payments = await getTuitionPayments(currentYear, currentMonth);
-        const allStudents = await getStudents();
-
-        const paidIds = new Set(payments.filter((p) => p.paid).map((p) => p.studentId));
-        const unpaid = allStudents.filter((s) => !paidIds.has(s.id)).map((s) => ({ name: s.name, studentId: s.id }));
-        setUnpaidStudents(unpaid);
-
-        // Check birthdays this month
-        const bdays = allStudents
-            .filter((s) => s.birthDate)
-            .map((s) => {
-                const bday = new Date(s.birthDate!);
-                const thisYearBday = new Date(currentYear, bday.getMonth(), bday.getDate());
-                const daysUntil = Math.ceil((thisYearBday.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                return { name: s.name, date: `${bday.getMonth() + 1}/${bday.getDate()}`, daysUntil };
-            })
-            .filter((b) => b.daysUntil >= 0 && b.daysUntil <= 30)
-            .sort((a, b) => a.daysUntil - b.daysUntil);
-        setBirthdays(bdays);
-    };
-
     const generateMessage = () => {
-        if (!selectedStudent || !selectedTemplate) return "生徒とテンプレートを選択してください";
+        if (!selectedStudent) return "生徒を選択してください";
+        if (!selectedBody || !selectedClosing) return "文章パターンを選択してください";
 
-        let message = selectedTemplate.text;
+        let message = "本日のレッスンもお疲れ様でした！\n\n" + selectedBody + "\n\n" + selectedClosing;
         const activePiece = selectedStudent.pieces.find((p) => p.status === "active");
         const pieceTitle = activePiece ? activePiece.title : "練習曲";
 
-        message = message.replace("{曲名}", pieceTitle);
-        message = message.replace("{良かった点}", customText || "リズム感");
-        message = message.replace("{次回の目標}", nextGoal || "表現力");
-        message = message.replace("{アドバイス}", customText || "ゆっくり片手ずつ練習してみてください");
+        message = message.replace(/{曲名}/g, pieceTitle);
+        message = message.replace(/{良かった点}/g, customText || getRandomSuggestion("goodPoints"));
+        message = message.replace(/{次回の目標}/g, nextGoal || getRandomSuggestion("nextGoals"));
+        message = message.replace(/{アドバイス}/g, adviceText || getRandomSuggestion("advice"));
         return message;
     };
 
     const handleCopy = async () => {
-        if (!selectedStudent || !selectedTemplate) return;
+        if (!selectedStudent) return;
         const message = generateMessage();
         navigator.clipboard.writeText(message);
         setCopied(true);
@@ -133,184 +159,24 @@ export default function ReportsView() {
             studentName: selectedStudent.name,
             date: new Date().toLocaleString("ja-JP"),
             message,
-            templateLabel: selectedTemplate.label,
+            templateLabel: "カスタム報告",
         });
-    };
-
-    const handleSaveTemplate = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (isSaving) return;
-        setIsSaving(true);
-        try {
-            const form = e.target as HTMLFormElement;
-            const formData = new FormData(form);
-
-            const templateData = {
-                label: formData.get("label") as string,
-                text: formData.get("text") as string,
-            };
-
-            if (editingTemplate && editingTemplate.isCustom) {
-                await updateTemplate({ ...editingTemplate, ...templateData });
-            } else {
-                await saveTemplate(templateData);
-            }
-
-            await loadData();
-            setIsTemplateModalOpen(false);
-            setEditingTemplate(null);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleDeleteTemplate = async (templateId: number) => {
-        if (!confirm("このテンプレートを削除しますか？")) return;
-        await deleteTemplate(templateId);
-        await loadData();
-    };
-
-    const generateInvoicePDF = async () => {
-        if (!invoiceStudent) return;
-
-        try {
-            const doc = new jsPDF();
-
-            // Load Japanese font
-            const fontUrl = "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.19/files/noto-sans-jp-all-400-normal.woff";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-            const fontBase64 = Buffer.from(fontBytes).toString('base64');
-
-            doc.addFileToVFS("NotoSansJP.ttf", fontBase64);
-            doc.addFont("NotoSansJP.ttf", "NotoSansJP", "normal");
-            doc.setFont("NotoSansJP");
-
-            const now = new Date();
-
-            // Header
-            doc.setFontSize(24);
-            doc.text("請求書", 105, 30, { align: "center" });
-
-            // Date
-            doc.setFontSize(10);
-            doc.text(`発行日: ${now.toLocaleDateString("ja-JP")}`, 150, 50);
-
-            // Student info
-            doc.setFontSize(14);
-            doc.text(`${invoiceStudent.name} 様`, 20, 70);
-
-            // Line
-            doc.line(20, 80, 190, 80);
-
-            // Details
-            doc.setFontSize(12);
-            doc.text("項目", 30, 95);
-            doc.text("金額", 150, 95);
-            doc.line(20, 100, 190, 100);
-
-            doc.text(`${invoiceMonth}月分 レッスン料`, 30, 115);
-            doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 115);
-
-            doc.line(20, 125, 190, 125);
-
-            // Total
-            doc.setFontSize(14);
-            doc.text("合計", 30, 145);
-            doc.text(`¥${parseInt(invoiceAmount).toLocaleString()}`, 150, 145);
-
-            // Footer
-            doc.setFontSize(10);
-            doc.text("※ 上記金額をお振込みにてお支払いください。", 20, 180);
-
-            doc.save(`請求書_${invoiceStudent.name}_${invoiceMonth}月.pdf`);
-        } catch (error) {
-            console.error("PDF generation failed:", error);
-            alert("PDF生成に失敗しました。");
-        }
-    };
-
-    const generateAnnualReportPDF = async () => {
-        if (!annualSummary) return;
-
-        try {
-            const doc = new jsPDF();
-
-            // Load Japanese font
-            const fontUrl = "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.19/files/noto-sans-jp-all-400-normal.woff";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-            const fontBase64 = Buffer.from(fontBytes).toString('base64');
-
-            doc.addFileToVFS("NotoSansJP.ttf", fontBase64);
-            doc.addFont("NotoSansJP.ttf", "NotoSansJP", "normal");
-            doc.setFont("NotoSansJP");
-
-            doc.setFontSize(24);
-            doc.text(`${annualYear}年 年間収支レポート`, 105, 30, { align: "center" });
-
-            doc.setFontSize(14);
-            doc.text(`総収入: ¥${annualSummary.totalIncome.toLocaleString()}`, 20, 50);
-            doc.text(`総支出: ¥${annualSummary.totalExpense.toLocaleString()}`, 20, 60);
-            doc.text(`収支差額: ¥${(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}`, 20, 70);
-
-            // Monthly Breakdown Table
-            doc.text("月別推移", 20, 90);
-            (doc as any).autoTable({
-                startY: 95,
-                head: [["月", "収入", "支出", "差額"]],
-                body: annualSummary.monthlyBreakdown.map(m => [
-                    m.month,
-                    `¥${m.income.toLocaleString()}`,
-                    `¥${m.expense.toLocaleString()}`,
-                    `¥${(m.income - m.expense).toLocaleString()}`
-                ]),
-                styles: { font: "NotoSansJP" },
-            });
-
-            const finalY = (doc as any).lastAutoTable.finalY + 20;
-
-            // Expense Breakdown Table
-            doc.text("経費内訳", 20, finalY);
-            (doc as any).autoTable({
-                startY: finalY + 5,
-                head: [["カテゴリ", "金額"]],
-                body: annualSummary.expenseByCategory.map(e => [
-                    e.category,
-                    `¥${e.amount.toLocaleString()}`
-                ]),
-                styles: { font: "NotoSansJP" },
-            });
-
-            doc.save(`年間収支レポート_${annualYear}.pdf`);
-        } catch (error) {
-            console.error("PDF generation failed:", error);
-            alert("PDF生成に失敗しました。");
-        }
     };
 
     return (
         <div className="space-y-6">
             <header>
                 <h2 className="text-3xl font-bold text-gradient mb-2">レッスン報告</h2>
-                <p className="text-slate-400">メッセージ生成・履歴・通知・請求書</p>
+                <p className="text-gray-500">メッセージ生成・履歴</p>
             </header>
 
             {/* Tabs */}
-            <div className="flex gap-2 p-1 bg-slate-800/50 rounded-xl w-fit flex-wrap">
-                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-violet-500/20 text-violet-300" : "text-slate-500 hover:text-slate-300"}`}>
+            <div className="flex gap-2 p-1 bg-card-solid rounded-xl w-fit flex-wrap border border-card-border">
+                <button onClick={() => setActiveTab("report")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "report" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <Sparkles className="w-4 h-4" />報告作成
                 </button>
-                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-blue-500/20 text-blue-300" : "text-slate-500 hover:text-slate-300"}`}>
+                <button onClick={() => setActiveTab("history")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "history" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <History className="w-4 h-4" />送信履歴
-                </button>
-                <button onClick={() => setActiveTab("notifications")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "notifications" ? "bg-amber-500/20 text-amber-300" : "text-slate-500 hover:text-slate-300"}`}>
-                    <Bell className="w-4 h-4" />通知
-                    {(unpaidStudents.length > 0 || birthdays.length > 0) && <span className="w-2 h-2 bg-rose-500 rounded-full" />}
-                </button>
-                <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "invoice" ? "bg-emerald-500/20 text-emerald-300" : "text-slate-500 hover:text-slate-300"}`}>
-                    <FileDown className="w-4 h-4" />請求書
-                </button>
-                <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium ${activeTab === "annual" ? "bg-purple-500/20 text-purple-300" : "text-slate-500 hover:text-slate-300"}`}>
-                    <FileDown className="w-4 h-4" />年間レポート
                 </button>
             </div>
 
@@ -319,18 +185,18 @@ export default function ReportsView() {
                     <div className="space-y-6">
                         {/* Student selector */}
                         <div className="glass-card p-6">
-                            <label className="block text-sm font-medium text-slate-400 mb-3">生徒を選択</label>
+                            <label className="block text-sm font-medium text-t-secondary mb-3">生徒を選択</label>
                             {students.length === 0 ? (
-                                <p className="text-slate-500 text-sm">生徒データがありません</p>
+                                <p className="text-t-muted text-sm">生徒データがありません</p>
                             ) : (
                                 <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-2">
                                     {students.map((student) => {
                                         const activePiece = student.pieces.find((p) => p.status === "active");
                                         return (
-                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-violet-500/20 border border-violet-500/30" : "bg-slate-800/50 border border-slate-700 hover:bg-slate-800"}`}>
-                                                <p className="font-medium">{student.name}</p>
+                                            <button key={student.id} onClick={() => setSelectedStudent(student)} className={`p-4 rounded-xl text-left ${selectedStudent?.id === student.id ? "bg-accent-bg border border-accent" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover"}`}>
+                                                <p className="font-medium text-t-primary">{student.name}</p>
                                                 {activePiece && (
-                                                    <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
+                                                    <p className="text-sm text-t-secondary flex items-center gap-1.5 mt-1"><Music className="w-3.5 h-3.5" />{activePiece.title}</p>
                                                 )}
                                             </button>
                                         );
@@ -339,44 +205,74 @@ export default function ReportsView() {
                             )}
                         </div>
 
-                        {/* Template selector */}
-                        <div className="glass-card p-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <label className="text-sm font-medium text-slate-400">テンプレートを選択</label>
-                                <button onClick={() => { setEditingTemplate(null); setIsTemplateModalOpen(true); }} className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
-                                    <Plus className="w-3 h-3" />新規作成
-                                </button>
-                            </div>
-                            <div className="space-y-2">
-                                {templates.map((template) => (
-                                    <div key={template.id} className={`p-4 rounded-xl text-left flex items-center gap-2 ${selectedTemplate?.id === template.id ? "bg-violet-500/20 border border-violet-500/30" : "bg-slate-800/50 border border-slate-700 hover:bg-slate-800"}`}>
-                                        <button onClick={() => setSelectedTemplate(template)} className="flex-1 text-left">
-                                            <p className="font-medium flex items-center gap-2">
-                                                <Sparkles className="w-4 h-4 text-violet-400" />
-                                                {template.label}
-                                                {template.isCustom && <span className="text-xs px-2 py-0.5 bg-slate-700 rounded-full">カスタム</span>}
-                                            </p>
+                        {/* Template selector replacement: Modular selectors */}
+                        <div className="space-y-6">
+                            <div className="glass-card p-6">
+                                <label className="block text-lg font-bold text-t-primary mb-4 border-b border-card-border pb-2">
+                                    <span className="bg-accent text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm mr-2">1</span>
+                                    本文を選択
+                                </label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {BODY_SENTENCES.map((text, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedBody(text)}
+                                            className={`w-full p-4 rounded-xl text-left text-sm transition-all leading-relaxed ${selectedBody === text ? "bg-accent-bg border border-accent ring-1 ring-accent text-t-primary shadow-sm" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover text-t-secondary"}`}
+                                        >
+                                            {text}
                                         </button>
-                                        {template.isCustom && (
-                                            <div className="flex gap-1">
-                                                <button onClick={() => { setEditingTemplate(template); setIsTemplateModalOpen(true); }} className="p-1.5 hover:bg-slate-700 rounded-lg"><Pencil className="w-3.5 h-3.5 text-slate-400" /></button>
-                                                <button onClick={() => handleDeleteTemplate(template.id)} className="p-1.5 hover:bg-rose-500/20 rounded-lg"><Trash2 className="w-3.5 h-3.5 text-rose-400" /></button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="glass-card p-6">
+                                <label className="block text-lg font-bold text-t-primary mb-4 border-b border-card-border pb-2">
+                                    <span className="bg-accent text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-sm mr-2">2</span>
+                                    締めを選択
+                                </label>
+                                <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                                    {CLOSING_SENTENCES.map((text, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedClosing(text)}
+                                            className={`w-full p-4 rounded-xl text-left text-sm transition-all leading-relaxed ${selectedClosing === text ? "bg-accent-bg border border-accent ring-1 ring-accent text-t-primary shadow-sm" : "bg-card-solid border border-card-border hover:bg-accent-bg-hover text-t-secondary"}`}
+                                        >
+                                            {text}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
                         {/* Custom inputs */}
                         <div className="glass-card p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">今日良かった点</label>
-                                <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 placeholder:text-slate-600" placeholder="例: テンポが安定していた" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">今日良かった点</label>
+                                <div className="flex gap-2">
+                                    <input type="text" value={customText} onChange={(e) => setCustomText(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: テンポが安定していた" />
+                                    {/* Using direct colors for sparkle button to keep it distinctive or use accent */}
+                                    <button onClick={() => handleShuffle("goodPoints")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
+                                        <Sparkles className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">次回の目標</label>
-                                <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100 placeholder:text-slate-600" placeholder="例: 表現力を意識する" />
+                                <label className="block text-sm font-medium text-t-secondary mb-2">次回の目標</label>
+                                <div className="flex gap-2">
+                                    <input type="text" value={nextGoal} onChange={(e) => setNextGoal(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: 表現力を意識する" />
+                                    <button onClick={() => handleShuffle("nextGoals")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
+                                        <Sparkles className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-t-secondary mb-2">アドバイス</label>
+                                <div className="flex gap-2">
+                                    <input type="text" value={adviceText} onChange={(e) => setAdviceText(e.target.value)} className="flex-1 px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text placeholder:text-t-placeholder focus:border-input-border-focus" placeholder="例: 片手ずつ練習しましょう" />
+                                    <button onClick={() => handleShuffle("advice")} className="p-3 bg-accent-bg hover:bg-accent-bg-hover text-accent rounded-xl transition-colors" title="ランダムに入力">
+                                        <Sparkles className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -384,36 +280,36 @@ export default function ReportsView() {
                     {/* Preview */}
                     <div className="glass-card p-6 flex flex-col">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-lg">プレビュー</h3>
-                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedTemplate} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-emerald-500/20 text-emerald-400" : "bg-violet-500/20 text-violet-300 hover:bg-violet-500/30 disabled:opacity-50 disabled:cursor-not-allowed"}`}>
+                            <h3 className="font-semibold text-lg text-t-primary">プレビュー</h3>
+                            <button onClick={handleCopy} disabled={!selectedStudent || !selectedBody || !selectedClosing} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${copied ? "bg-success-bg text-emerald-700" : "bg-accent-bg text-accent hover:bg-accent-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"}`}>
                                 {copied ? <><Check className="w-4 h-4" />コピーしました</> : <><Copy className="w-4 h-4" />コピー</>}
                             </button>
                         </div>
-                        <div className="flex-1 bg-slate-800/50 border border-slate-700 rounded-xl p-5 whitespace-pre-wrap text-slate-300 leading-relaxed">{generateMessage()}</div>
-                        <p className="text-sm text-slate-500 mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
+                        <div className="flex-1 bg-card-solid border border-card-border rounded-xl p-5 whitespace-pre-wrap text-t-primary leading-relaxed">{generateMessage()}</div>
+                        <p className="text-sm text-t-muted mt-4 text-center">コピーしたメッセージをLINEに貼り付けて送信してください</p>
                     </div>
                 </div>
             )}
 
             {activeTab === "history" && (
                 <div className="glass-card">
-                    <div className="p-5 border-b border-slate-800">
-                        <h3 className="font-semibold text-lg">送信履歴</h3>
+                    <div className="p-5 border-b border-card-border">
+                        <h3 className="font-semibold text-lg text-t-primary">送信履歴</h3>
                     </div>
                     {loadingHistory ? (
-                        <div className="p-8 text-center text-slate-500">読み込み中...</div>
+                        <div className="p-8 text-center text-t-muted">読み込み中...</div>
                     ) : reportHistory.length === 0 ? (
-                        <div className="p-8 text-center text-slate-500">送信履歴はありません</div>
+                        <div className="p-8 text-center text-t-muted">送信履歴はありません</div>
                     ) : (
-                        <div className="divide-y divide-slate-800 max-h-[600px] overflow-y-auto">
+                        <div className="divide-y divide-card-border max-h-[600px] overflow-y-auto">
                             {reportHistory.map((record) => (
                                 <div key={record.id} className="p-5">
                                     <div className="flex items-center justify-between mb-2">
-                                        <p className="font-medium">{record.studentName}</p>
-                                        <span className="text-sm text-slate-500">{record.date}</span>
+                                        <p className="font-medium text-t-primary">{record.studentName}</p>
+                                        <span className="text-sm text-t-secondary">{record.date}</span>
                                     </div>
-                                    <p className="text-xs text-violet-400 mb-2">{record.templateLabel}</p>
-                                    <p className="text-sm text-slate-400 whitespace-pre-wrap line-clamp-3">{record.message}</p>
+                                    <p className="text-xs text-accent mb-2">{record.templateLabel}</p>
+                                    <p className="text-sm text-t-secondary whitespace-pre-wrap line-clamp-3">{record.message}</p>
                                 </div>
                             ))}
                         </div>
@@ -421,184 +317,7 @@ export default function ReportsView() {
                 </div>
             )}
 
-            {activeTab === "notifications" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="glass-card">
-                        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-                            <div className="p-2 bg-rose-500/10 rounded-lg"><AlertCircle className="w-5 h-5 text-rose-400" /></div>
-                            <div>
-                                <h3 className="font-semibold">未払い月謝</h3>
-                                <p className="text-sm text-slate-500">{new Date().getMonth() + 1}月分</p>
-                            </div>
-                        </div>
-                        {unpaidStudents.length === 0 ? (
-                            <div className="p-8 text-center text-emerald-400">すべて支払い済みです ✓</div>
-                        ) : (
-                            <div className="divide-y divide-slate-800">
-                                {unpaidStudents.map((s) => (
-                                    <div key={s.studentId} className="p-4 flex items-center gap-3">
-                                        <div className="w-2 h-2 bg-rose-500 rounded-full" />
-                                        <span>{s.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
 
-                    <div className="glass-card">
-                        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
-                            <div className="p-2 bg-pink-500/10 rounded-lg"><Cake className="w-5 h-5 text-pink-400" /></div>
-                            <div>
-                                <h3 className="font-semibold">今月の誕生日</h3>
-                                <p className="text-sm text-slate-500">30日以内</p>
-                            </div>
-                        </div>
-                        {birthdays.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500">今月の誕生日はありません</div>
-                        ) : (
-                            <div className="divide-y divide-slate-800">
-                                {birthdays.map((b, i) => (
-                                    <div key={i} className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Cake className="w-4 h-4 text-pink-400" />
-                                            <span>{b.name}</span>
-                                        </div>
-                                        <span className="text-sm text-pink-400">{b.date} {b.daysUntil === 0 ? "🎉 今日！" : `(${b.daysUntil}日後)`}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {activeTab === "invoice" && (
-                <div className="glass-card p-6 max-w-md">
-                    <h3 className="font-semibold text-lg mb-6">PDF請求書を生成</h3>
-                    <div className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">生徒を選択</label>
-                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
-                                <option value="">選択してください</option>
-                                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">対象月</label>
-                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => <option key={m} value={m}>{m}月</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-slate-400 mb-2">金額</label>
-                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" />
-                        </div>
-                        <button onClick={generateInvoicePDF} disabled={!invoiceStudent} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
-                            <FileDown className="w-5 h-5" />PDFをダウンロード
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Annual Report Tab */}
-            {activeTab === "annual" && annualSummary && (
-                <div className="glass-card p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold">年間収支レポート（確定申告用）</h3>
-                        <div className="flex gap-4">
-                            <select value={annualYear} onChange={(e) => setAnnualYear(parseInt(e.target.value))} className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-100">
-                                {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}年</option>)}
-                            </select>
-                            <button onClick={generateAnnualReportPDF} className="px-4 py-2 premium-gradient rounded-lg text-white font-medium shadow-lg">
-                                PDFダウンロード
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                            <p className="text-sm text-emerald-400 mb-1">総収入</p>
-                            <p className="text-2xl font-bold">¥{annualSummary.totalIncome.toLocaleString()}</p>
-                        </div>
-                        <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/20">
-                            <p className="text-sm text-rose-400 mb-1">総支出</p>
-                            <p className="text-2xl font-bold">¥{annualSummary.totalExpense.toLocaleString()}</p>
-                        </div>
-                        <div className="p-4 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                            <p className="text-sm text-blue-400 mb-1">収支差額</p>
-                            <p className="text-2xl font-bold">¥{(annualSummary.totalIncome - annualSummary.totalExpense).toLocaleString()}</p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <h4 className="font-semibold mb-4">月別推移</h4>
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-slate-400 border-b border-slate-700">
-                                    <tr>
-                                        <th className="pb-2">月</th>
-                                        <th className="pb-2">収入</th>
-                                        <th className="pb-2">支出</th>
-                                        <th className="pb-2">差額</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800">
-                                    {annualSummary.monthlyBreakdown.map((m, i) => (
-                                        <tr key={i} className="group hover:bg-slate-800/30">
-                                            <td className="py-2">{m.month}</td>
-                                            <td className="py-2 text-emerald-400">¥{m.income.toLocaleString()}</td>
-                                            <td className="py-2 text-rose-400">¥{m.expense.toLocaleString()}</td>
-                                            <td className="py-2">¥{(m.income - m.expense).toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold mb-4">経費内訳</h4>
-                            <table className="w-full text-sm text-left">
-                                <thead className="text-slate-400 border-b border-slate-700">
-                                    <tr>
-                                        <th className="pb-2">カテゴリ</th>
-                                        <th className="pb-2">金額</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-800">
-                                    {annualSummary.expenseByCategory.map((e, i) => (
-                                        <tr key={i} className="group hover:bg-slate-800/30">
-                                            <td className="py-2">{e.category}</td>
-                                            <td className="py-2">¥{e.amount.toLocaleString()}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Template Modal */}
-            {isTemplateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setIsTemplateModalOpen(false)} />
-                    <div className="relative z-10 w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-8">
-                        <button onClick={() => setIsTemplateModalOpen(false)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white"><X className="w-6 h-6" /></button>
-                        <h3 className="text-2xl font-bold text-gradient mb-6">{editingTemplate ? "テンプレートを編集" : "新規テンプレート"}</h3>
-                        <form onSubmit={handleSaveTemplate} className="space-y-5">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">テンプレート名</label>
-                                <input name="label" required defaultValue={editingTemplate?.label} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="例: 発表会に向けて" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-2">テンプレート内容</label>
-                                <textarea name="text" rows={8} required defaultValue={editingTemplate?.text} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-100" placeholder="利用可能な変数: {曲名}, {良かった点}, {次回の目標}, {アドバイス}" />
-                                <p className="text-xs text-slate-500 mt-2">変数: {"{曲名}"}, {"{良かった点}"}, {"{次回の目標}"}, {"{アドバイス}"}</p>
-                            </div>
-                            <button type="submit" disabled={isSaving} className={`w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg ${isSaving ? "opacity-50 cursor-not-allowed" : ""}`}>{isSaving ? "保存中..." : (editingTemplate ? "更新する" : "保存する")}</button>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
