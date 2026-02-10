@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "@/lib/auth";
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
+    console.log("Middleware executed for:", request.nextUrl.pathname);
     const session = request.cookies.get("session")?.value;
+    console.log("Session value:", session);
 
     // Public paths that don't require authentication
     const publicPaths = ["/login", "/manifest.json", "/icons", "/robots.txt", "/sitemap.xml"];
