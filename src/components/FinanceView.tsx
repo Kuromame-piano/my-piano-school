@@ -97,21 +97,15 @@ export default function FinanceView() {
         try {
             const doc = new jsPDF();
 
-            // Load Japanese font (OTF)
-            const fontUrl = "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            // Load Japanese font (TTF) from local
+            const fontBytes = await fetch("/fonts/SawarabiGothic-Regular.ttf").then(res => res.arrayBuffer());
+            const fontBase64 = btoa(
+                new Uint8Array(fontBytes).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
 
-            // Convert to Base64 (browser safe)
-            const bytes = new Uint8Array(fontBytes);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            const fontBase64 = window.btoa(binary);
-
-            doc.addFileToVFS("NotoSansJP.otf", fontBase64);
-            doc.addFont("NotoSansJP.otf", "NotoSansJP", "normal");
-            doc.setFont("NotoSansJP");
+            doc.addFileToVFS("SawarabiGothic-Regular.ttf", fontBase64);
+            doc.addFont("SawarabiGothic-Regular.ttf", "SawarabiGothic", "normal");
+            doc.setFont("SawarabiGothic");
 
             const now = new Date();
 
@@ -163,20 +157,16 @@ export default function FinanceView() {
         try {
             const doc = new jsPDF();
 
-            // Load Japanese font
-            const fontUrl = "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/OTF/Japanese/NotoSansCJKjp-Regular.otf";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            // Load Japanese font (TTF) from local
+            const fontBytes = await fetch("/fonts/SawarabiGothic-Regular.ttf").then(res => res.arrayBuffer());
 
-            const bytes = new Uint8Array(fontBytes);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) {
-                binary += String.fromCharCode(bytes[i]);
-            }
-            const fontBase64 = window.btoa(binary);
+            const fontBase64 = btoa(
+                new Uint8Array(fontBytes).reduce((data, byte) => data + String.fromCharCode(byte), '')
+            );
 
-            doc.addFileToVFS("NotoSansJP.otf", fontBase64);
-            doc.addFont("NotoSansJP.otf", "NotoSansJP", "normal");
-            doc.setFont("NotoSansJP");
+            doc.addFileToVFS("SawarabiGothic-Regular.ttf", fontBase64);
+            doc.addFont("SawarabiGothic-Regular.ttf", "SawarabiGothic", "normal");
+            doc.setFont("SawarabiGothic");
 
             doc.setFontSize(24);
             doc.text(`${annualYear}年 年間収支レポート`, 105, 30, { align: "center" });
@@ -197,7 +187,7 @@ export default function FinanceView() {
                     `¥${m.expense.toLocaleString()}`,
                     `¥${(m.income - m.expense).toLocaleString()}`
                 ]),
-                styles: { font: "NotoSansJP" },
+                styles: { font: "SawarabiGothic" },
             });
 
             const finalY = (doc as any).lastAutoTable.finalY + 20;
@@ -211,7 +201,7 @@ export default function FinanceView() {
                     e.category,
                     `¥${e.amount.toLocaleString()}`
                 ]),
-                styles: { font: "NotoSansJP" },
+                styles: { font: "SawarabiGothic" },
             });
 
             doc.save(`年間収支レポート_${annualYear}.pdf`);
