@@ -84,6 +84,7 @@ export async function addTextbook(textbook: Omit<Textbook, "id">) {
                 values: [rowData],
             },
         });
+        invalidateCache(CACHE_KEYS.TEXTBOOKS);
         return { success: true, id };
     } catch (error) {
         console.error("Error adding textbook:", error);

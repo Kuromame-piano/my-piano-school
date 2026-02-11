@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Plus, Search, X, Music, User, Star, FileText, Pencil, Trash2, ExternalLink, Library, Book } from "lucide-react";
 import { getSheetMusic, saveSheetMusic, deleteSheetMusic, SheetMusic } from "../actions/sheetMusicActions";
 import { getStudents, Student } from "../actions/studentActions";
-import { getTextbooks, Textbook } from "../actions/textbookActions";
+import { getTextbooks, addTextbook, Textbook } from "../actions/textbookActions";
 import useSWR from "swr";
 
 function MusicCard({ music, selected, onClick, getDifficultyStars, textbook }: {
@@ -46,7 +46,7 @@ export default function SheetMusicView() {
         getSheetMusic
     );
 
-    const { data: textbooks = [] } = useSWR(['textbooks'], getTextbooks);
+    const { data: textbooks = [], mutate: mutateTextbooks } = useSWR(['textbooks'], getTextbooks);
     const [groupByTextbook, setGroupByTextbook] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -56,6 +56,10 @@ export default function SheetMusicView() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingMusic, setEditingMusic] = useState<SheetMusic | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isCreatingTextbook, setIsCreatingTextbook] = useState(false);
+    const [newTextbookTitle, setNewTextbookTitle] = useState("");
+    const [newTextbookLevel, setNewTextbookLevel] = useState("");
+    const [newTextbookPublisher, setNewTextbookPublisher] = useState("");
 
     const handleSelectMusic = (music: SheetMusic) => {
         setSelectedMusic(music);
@@ -73,6 +77,13 @@ export default function SheetMusicView() {
         return 0;
     });
 
+    const resetTextbookCreation = () => {
+        setIsCreatingTextbook(false);
+        setNewTextbookTitle("");
+        setNewTextbookLevel("");
+        setNewTextbookPublisher("");
+    };
+
     const handleSaveMusic = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (isSaving) return;
@@ -80,6 +91,22 @@ export default function SheetMusicView() {
         try {
             const form = e.target as HTMLFormElement;
             const formData = new FormData(form);
+
+            let textbookId: number | undefined;
+            if (isCreatingTextbook && newTextbookTitle.trim()) {
+                const result = await addTextbook({
+                    title: newTextbookTitle.trim(),
+                    level: newTextbookLevel || "",
+                    totalPages: 0,
+                    publisher: newTextbookPublisher || undefined,
+                });
+                if (result.success && result.id) {
+                    textbookId = result.id;
+                    await mutateTextbooks();
+                }
+            } else {
+                textbookId = formData.get("textbookId") ? parseInt(formData.get("textbookId") as string) : undefined;
+            }
 
             const musicData: SheetMusic = {
                 id: editingMusic ? editingMusic.id : Date.now(),
@@ -89,7 +116,7 @@ export default function SheetMusicView() {
                 genre: formData.get("genre") as string || undefined,
                 pdfUrl: formData.get("pdfUrl") as string,
                 notes: formData.get("notes") as string,
-                textbookId: formData.get("textbookId") ? parseInt(formData.get("textbookId") as string) : undefined,
+                textbookId,
                 orderInTextbook: formData.get("orderInTextbook") ? parseInt(formData.get("orderInTextbook") as string) : undefined,
             };
 
@@ -97,6 +124,7 @@ export default function SheetMusicView() {
             await mutateSheetMusic();
             setIsAddModalOpen(false);
             setEditingMusic(null);
+            resetTextbookCreation();
         } finally {
             setIsSaving(false);
         }
@@ -125,7 +153,7 @@ export default function SheetMusicView() {
                     <h2 className="text-2xl sm:text-3xl font-bold text-gradient mb-1 sm:mb-2">楽譜ライブラリ</h2>
                     <p className="text-sm sm:text-base text-gray-500">教本・楽譜のカタログを管理</p>
                 </div>
-                <button onClick={() => { setEditingMusic(null); setIsAddModalOpen(true); }} className="flex items-center justify-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all sm:hover:scale-105 w-full sm:w-auto">
+                <button onClick={() => { setEditingMusic(null); resetTextbookCreation(); setIsAddModalOpen(true); }} className="flex items-center justify-center gap-2 px-5 py-3 premium-gradient rounded-xl font-medium text-white shadow-lg hover:shadow-xl transition-all sm:hover:scale-105 w-full sm:w-auto">
                     <Plus className="w-5 h-5" />楽譜を追加
                 </button>
             </header>
@@ -217,7 +245,7 @@ export default function SheetMusicView() {
                                 <div className="flex items-start justify-between mb-4">
                                     <h3 className="font-bold text-xl text-t-primary">{selectedMusic.title}</h3>
                                     <div className="flex gap-2">
-                                        <button onClick={() => { setEditingMusic(selectedMusic); setIsAddModalOpen(true); }} className="p-2 hover:bg-accent-bg-hover rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
+                                        <button onClick={() => { setEditingMusic(selectedMusic); resetTextbookCreation(); setIsAddModalOpen(true); }} className="p-2 hover:bg-accent-bg-hover rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
                                         <button onClick={() => handleDeleteMusic(selectedMusic.id)} className="p-2 hover:bg-danger-bg rounded-lg"><Trash2 className="w-4 h-4 text-danger" /></button>
                                     </div>
                                 </div>
@@ -261,9 +289,9 @@ export default function SheetMusicView() {
             {/* Add/Edit Modal */}
             {isAddModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} />
+                    <div className="fixed inset-0 bg-modal-overlay backdrop-blur-sm" onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); resetTextbookCreation(); }} />
                     <div className="relative z-10 w-full sm:max-w-md lg:max-w-lg bg-modal-bg border border-modal-border rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto safe-area-bottom shadow-xl">
-                        <button onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
+                        <button onClick={() => { setIsAddModalOpen(false); setEditingMusic(null); resetTextbookCreation(); }} className="absolute top-6 right-6 p-2 text-t-muted hover:text-t-primary"><X className="w-6 h-6" /></button>
                         <h3 className="text-2xl font-bold text-gradient mb-6">{editingMusic ? "楽譜を編集" : "新規楽譜"}</h3>
                         <form onSubmit={handleSaveMusic} className="space-y-5">
                             <div>
@@ -293,10 +321,22 @@ export default function SheetMusicView() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-t-secondary mb-2">教本</label>
-                                    <select name="textbookId" defaultValue={editingMusic?.textbookId || ""} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
-                                        <option value="">なし（単独曲）</option>
-                                        {textbooks.map(tb => <option key={tb.id} value={tb.id}>{tb.title}</option>)}
-                                    </select>
+                                    {isCreatingTextbook ? (
+                                        <div className="space-y-2">
+                                            <input value={newTextbookTitle} onChange={(e) => setNewTextbookTitle(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="教本名 *" />
+                                            <input value={newTextbookLevel} onChange={(e) => setNewTextbookLevel(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="レベル（例: 初級）" />
+                                            <input value={newTextbookPublisher} onChange={(e) => setNewTextbookPublisher(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" placeholder="出版社" />
+                                            <button type="button" onClick={resetTextbookCreation} className="text-xs text-accent hover:text-accent-hover">既存の教本から選ぶ</button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <select name="textbookId" defaultValue={editingMusic?.textbookId || ""} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                                                <option value="">なし（単独曲）</option>
+                                                {textbooks.map(tb => <option key={tb.id} value={tb.id}>{tb.title}</option>)}
+                                            </select>
+                                            <button type="button" onClick={() => setIsCreatingTextbook(true)} className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover"><Plus className="w-3 h-3" />新しい教本を追加</button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-t-secondary mb-2">教本内の順番</label>

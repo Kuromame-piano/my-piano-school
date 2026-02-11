@@ -960,7 +960,7 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                                 const dayEvents = getEventsForDay(day);
                                 const isToday = day.toDateString() === new Date().toDateString();
                                 return (
-                                    <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-accent" : ""}`}>
+                                    <div key={i} onClick={() => openAddModal(undefined, day)} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] cursor-pointer ${isToday ? "ring-2 ring-accent" : ""}`}>
                                         <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-card-border relative">
                                             <p className="text-xs sm:text-sm text-t-secondary">{dayNames[i]}</p>
                                             <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-accent" : "text-t-primary"}`}>{day.getDate()}</p>
@@ -973,21 +973,12 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                                             </button>
                                         </div>
                                         <div className="space-y-1.5 sm:space-y-2">
-                                            {dayEvents.length === 0 ? (
-                                                <button
-                                                    onClick={() => openAddModal(undefined, day)}
-                                                    className="w-full text-xs text-t-muted text-center py-2 sm:py-4 hover:text-accent hover:bg-accent-bg/50 rounded-lg transition-colors cursor-pointer"
-                                                >
-                                                    + タップして追加
+                                            {dayEvents.map((event, idx) => (
+                                                <button key={event.id} onClick={(e) => { e.stopPropagation(); setSelectedEvent(event); }} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-accent-bg-hover transition-colors`}>
+                                                    <p className="text-[10px] sm:text-xs text-accent mb-0.5">{formatTime(event.start)}</p>
+                                                    <p className="text-xs sm:text-sm font-medium truncate text-t-primary">{event.title}</p>
                                                 </button>
-                                            ) : (
-                                                dayEvents.map((event, idx) => (
-                                                    <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-accent-bg-hover transition-colors`}>
-                                                        <p className="text-[10px] sm:text-xs text-accent mb-0.5">{formatTime(event.start)}</p>
-                                                        <p className="text-xs sm:text-sm font-medium truncate text-t-primary">{event.title}</p>
-                                                    </button>
-                                                ))
-                                            )}
+                                            ))}
                                         </div>
                                     </div>
                                 );
