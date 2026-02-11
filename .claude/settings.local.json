@@ -8,7 +8,11 @@
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
       "Bash(npm run build:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm list:*)",
+      "Bash(curl:*)"
     ]
   }
 }
