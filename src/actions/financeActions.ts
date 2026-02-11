@@ -357,7 +357,8 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
 
         if (payment.paid && !wasPaid) {
             // Newly paid → create income transaction
-            const txDate = payment.paidDate || new Date().toISOString().split("T")[0];
+            // Use the first day of the target month for correct chart aggregation
+            const txDate = `${payment.year}-${String(payment.month).padStart(2, '0')}-01`;
             newTransactionId = await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
             invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
         } else if (!payment.paid && wasPaid) {
@@ -495,7 +496,8 @@ export async function saveLessonPayment(payment: LessonPayment) {
 
         if (payment.paid && !wasPaid) {
             // Newly paid → create income transaction
-            const txDate = payment.paidDate || payment.lessonDate;
+            // Always use the lesson date for correct chart aggregation
+            const txDate = payment.lessonDate;
             newTransactionId = await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
             invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
         } else if (!payment.paid && wasPaid) {

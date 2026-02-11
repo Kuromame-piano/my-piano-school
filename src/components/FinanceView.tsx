@@ -133,12 +133,17 @@ export default function FinanceView() {
             setMonthLessons(lessonEvents);
             const perLessonStudents = students.filter((s) => !s.archived && s.paymentType === "per-lesson");
 
+            const seen = new Set<string>();
             const mergedLessons: LessonPayment[] = lessonEvents
                 .map((lesson) => {
                     const student = perLessonStudents.find((s) => lesson.title.includes(s.name) || s.name.includes(lesson.title));
                     if (!student) return null;
 
                     const lessonDateStr = lesson.start.split("T")[0];
+                    const dedupeKey = `${student.id}-${lessonDateStr}`;
+                    if (seen.has(dedupeKey)) return null;
+                    seen.add(dedupeKey);
+
                     const existing = lessonData.find((p) => p.lessonDate === lessonDateStr && p.studentId === student.id);
 
                     return existing || {
@@ -547,7 +552,7 @@ export default function FinanceView() {
                                         <p className={`font-semibold text-sm sm:text-base ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>{tx.type === "income" ? "+" : "-"}¥{tx.amount.toLocaleString()}</p>
                                         <p className="text-xs text-t-muted">{tx.date}</p>
                                     </div>
-                                    <div className="hidden sm:flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                                         <button onClick={() => handleEditTransaction(tx)} className="p-2 hover:bg-card-border rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
                                         <button onClick={() => handleDeleteTransaction(tx.id)} className="p-2 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                                     </div>
@@ -634,7 +639,7 @@ export default function FinanceView() {
                                 const isMemoExpanded = expandedMemos.has(key);
 
                                 return (
-                                    <div key={student.id} className={`glass-card p-0 overflow-hidden border-l-4 ${hasUnpaid ? "border-l-rose-400" : "border-l-emerald-400"}`}>
+                                    <div key={`${student.id}-${selectedYear}-${selectedMonth}`} className={`glass-card p-0 overflow-hidden border-l-4 ${hasUnpaid ? "border-l-rose-400" : "border-l-emerald-400"}`}>
                                         <div className="p-4 border-b border-gray-50 bg-white/50 flex justify-between items-start">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
@@ -734,7 +739,7 @@ export default function FinanceView() {
                                                         <div className="text-center text-xs text-t-muted py-2 border border-dashed border-gray-200 rounded-lg">レッスン記録なし</div>
                                                     ) : (
                                                         lessons.map((lesson) => (
-                                                            <div key={lesson.id} className="flex items-center justify-between group">
+                                                            <div key={`${lesson.studentId}-${lesson.lessonDate}`} className="flex items-center justify-between group">
                                                                 <div className="flex items-center gap-3">
                                                                     <div
                                                                         onClick={() => handleToggleLessonPayment(lesson)}
