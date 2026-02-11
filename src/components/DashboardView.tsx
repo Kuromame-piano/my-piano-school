@@ -6,7 +6,8 @@ import { getStudents, Student } from "../actions/studentActions";
 import { getTransactions, getTuitionPayments, Transaction, TuitionPayment } from "../actions/financeActions";
 import { getLessons, CalendarEvent } from "../actions/calendarActions";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import useSWR from "swr";
 
 
 import { NavigationPayload } from "@/app/page";
@@ -44,132 +45,137 @@ interface BirthdayStudent {
 }
 
 export default function DashboardView({ onNavigate }: DashboardViewProps) {
-    const [stats, setStats] = useState({
-        studentCount: 0,
-        monthlyIncome: 0,
-        unpaidCount: 0
-    });
-    const [todaysLessons, setTodaysLessons] = useState<TodayLesson[]>([]);
-    const [unpaidStudents, setUnpaidStudents] = useState<UnpaidStudent[]>([]);
-    const [recentAchievements, setRecentAchievements] = useState<Achievement[]>([]);
-    const [upcomingBirthdays, setUpcomingBirthdays] = useState<BirthdayStudent[]>([]);
-
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    // Cache student data for daily lesson lookups
-    const studentsRef = useRef<Student[]>([]);
+    const now = useMemo(() => new Date(), []);
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    // Effect 1: Static data – runs only on mount
-    useEffect(() => {
-        const fetchStaticData = async () => {
-            const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
+    // SWR for data fetching
+    const { data: studentData = [] } = useSWR(['students'], getStudents);
+    const { data: transactions = [] } = useSWR(['transactions'], getTransactions);
+    const { data: tuitionPayments = [] } = useSWR(
+        ['tuitionPayments', currentYear, currentMonth + 1],
+        () => getTuitionPayments(currentYear, currentMonth + 1)
+    );
 
-            const [studentData, transactions, tuitionPayments] = await Promise.all([
-                getStudents(),
-                getTransactions(),
-                getTuitionPayments(currentYear, currentMonth + 1)
-            ]);
-
-            studentsRef.current = studentData;
-
-            // 1. Calculate Stats
-            const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
-            const studentCount = activeStudents.length;
-
-            const monthlyIncome = transactions
-                .filter(t => t.type === 'income' && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
-                .reduce((sum, t) => sum + t.amount, 0);
-
-            // 2. Unpaid Tuition Logic
-            const paidStudentIds = tuitionPayments.filter(p => p.paid).map(p => p.studentId);
-
-            const unpaidList = activeStudents
-                .filter(s => s.paymentType === 'monthly' && !paidStudentIds.includes(s.id))
-                .map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    amount: s.monthlyFee || 0
-                }));
-
-            setStats({
-                studentCount,
-                monthlyIncome,
-                unpaidCount: unpaidList.length
-            });
-            setUnpaidStudents(unpaidList);
-
-            // 4. Recent Achievements (Completed pieces in last 30 days)
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-            const achievements: any[] = [];
-            activeStudents.forEach(s => {
-                s.pieces.forEach(p => {
-                    if (p.status === 'completed' && p.completedAt) {
-                        const completedDate = new Date(p.completedAt);
-                        if (completedDate >= thirtyDaysAgo) {
-                            achievements.push({
-                                studentName: s.name,
-                                pieceTitle: p.title,
-                                date: completedDate.toLocaleDateString('ja-JP'),
-                                studentId: s.id
-                            });
-                        }
-                    }
-                });
-            });
-            achievements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setRecentAchievements(achievements.slice(0, 5));
-
-            // 5. Upcoming Birthdays (This month)
-            const birthdays = activeStudents
-                .filter(s => {
-                    if (!s.birthDate) return false;
-                    const birthDate = new Date(s.birthDate);
-                    return birthDate.getMonth() === currentMonth;
-                })
-                .map(s => {
-                    const birthDate = new Date(s.birthDate!);
-                    return {
-                        name: s.name,
-                        date: `${birthDate.getMonth() + 1}/${birthDate.getDate()}`,
-                        day: birthDate.getDate(),
-                        age: currentYear - birthDate.getFullYear()
-                    };
-                })
-                .sort((a, b) => a.day - b.day);
-
-            setUpcomingBirthdays(birthdays);
-        };
-        fetchStaticData();
-    }, []);
-
-    // Effect 2: Daily lessons – runs only when selectedDate changes
-    useEffect(() => {
-        const fetchDailyLessons = async () => {
-            const startOfDay = new Date(selectedDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(selectedDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            const dayEvents = await getLessons(startOfDay.toISOString(), endOfDay.toISOString());
-            const studentData = studentsRef.current;
-
-            setTodaysLessons(dayEvents.map(e => {
-                const matchingStudent = studentData.find(s => s.name === e.title);
-                return {
-                    name: e.title,
-                    piece: e.description || "練習曲",
-                    time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-                    color: matchingStudent?.color || "bg-pink-500",
-                    studentId: matchingStudent?.id
-                };
-            }));
-        };
-        fetchDailyLessons();
+    // Daily lessons with SWR
+    const { startOfDay, endOfDay } = useMemo(() => {
+        const start = new Date(selectedDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(selectedDate);
+        end.setHours(23, 59, 59, 999);
+        return { startOfDay: start, endOfDay: end };
     }, [selectedDate]);
+
+    const { data: dayEvents = [] } = useSWR(
+        ['lessons', startOfDay.toISOString(), endOfDay.toISOString()],
+        () => getLessons(startOfDay.toISOString(), endOfDay.toISOString())
+    );
+
+    // Compute derived data using useMemo
+    const stats = useMemo(() => {
+        if (!studentData.length || !transactions.length) {
+            return { studentCount: 0, monthlyIncome: 0, unpaidCount: 0 };
+        }
+
+        const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
+        const studentCount = activeStudents.length;
+
+        const monthlyIncome = transactions
+            .filter(t => t.type === 'income' && new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+        const paidStudentIds = tuitionPayments.filter(p => p.paid).map(p => p.studentId);
+        const unpaidCount = activeStudents
+            .filter(s => s.paymentType === 'monthly' && !paidStudentIds.includes(s.id))
+            .length;
+
+        return { studentCount, monthlyIncome, unpaidCount };
+    }, [studentData, transactions, tuitionPayments, currentMonth, currentYear]);
+
+    const unpaidStudents = useMemo(() => {
+        if (!studentData.length || !tuitionPayments.length) return [];
+
+        const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
+        const paidStudentIds = tuitionPayments.filter(p => p.paid).map(p => p.studentId);
+
+        return activeStudents
+            .filter(s => s.paymentType === 'monthly' && !paidStudentIds.includes(s.id))
+            .map(s => ({
+                id: s.id,
+                name: s.name,
+                amount: s.monthlyFee || 0
+            }));
+    }, [studentData, tuitionPayments]);
+
+    const recentAchievements = useMemo(() => {
+        if (!studentData.length) return [];
+
+        const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const achievements: Achievement[] = [];
+        activeStudents.forEach(s => {
+            s.pieces.forEach(p => {
+                if (p.status === 'completed' && p.completedAt) {
+                    const completedDate = new Date(p.completedAt);
+                    if (completedDate >= thirtyDaysAgo) {
+                        achievements.push({
+                            studentName: s.name,
+                            pieceTitle: p.title,
+                            date: completedDate.toLocaleDateString('ja-JP'),
+                            studentId: s.id
+                        });
+                    }
+                }
+            });
+        });
+
+        achievements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return achievements.slice(0, 5);
+    }, [studentData]);
+
+    const upcomingBirthdays = useMemo(() => {
+        if (!studentData.length) return [];
+
+        const activeStudents = studentData.filter(s => !s.archived && s.status !== "休会");
+
+        const birthdays = activeStudents
+            .filter(s => {
+                if (!s.birthDate) return false;
+                const birthDate = new Date(s.birthDate);
+                return birthDate.getMonth() === currentMonth;
+            })
+            .map(s => {
+                const birthDate = new Date(s.birthDate!);
+                return {
+                    name: s.name,
+                    date: `${birthDate.getMonth() + 1}/${birthDate.getDate()}`,
+                    day: birthDate.getDate(),
+                    age: currentYear - birthDate.getFullYear()
+                };
+            })
+            .sort((a, b) => a.day - b.day);
+
+        return birthdays;
+    }, [studentData, currentMonth, currentYear]);
+
+    const todaysLessons = useMemo(() => {
+        if (!dayEvents.length || !studentData.length) return [];
+
+        return dayEvents.map(e => {
+            const matchingStudent = studentData.find(s => s.name === e.title);
+            return {
+                name: e.title,
+                piece: e.description || "練習曲",
+                time: new Date(e.start).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+                color: matchingStudent?.color || "bg-pink-500",
+                studentId: matchingStudent?.id
+            };
+        });
+    }, [dayEvents, studentData]);
 
     const statItems = [
         { label: "生徒数", value: stats.studentCount.toString(), icon: Users, color: "text-pink-400", sub: "人" },
