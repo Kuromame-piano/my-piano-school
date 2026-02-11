@@ -7,6 +7,7 @@ import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-
 import { CSS } from "@dnd-kit/utilities";
 import { getRecitals, saveRecital, deleteRecital, Recital, RecitalParticipant } from "../actions/recitalActions";
 import { getStudents, saveStudent, Student, RecitalRecord } from "../actions/studentActions";
+import useSWR from "swr";
 
 // Sortable Participant Component
 function SortableParticipant({
@@ -93,9 +94,17 @@ function SortableParticipant({
 }
 
 export default function RecitalView() {
-    const [recitals, setRecitals] = useState<Recital[]>([]);
-    const [students, setStudents] = useState<Student[]>([]);
-    const [loading, setLoading] = useState(true);
+    // SWR for data fetching
+    const { data: recitals = [], mutate: mutateRecitals, isLoading } = useSWR(
+        ['recitals'],
+        getRecitals
+    );
+
+    const { data: students = [] } = useSWR(
+        ['students'],
+        getStudents
+    );
+
     const [selectedRecital, setSelectedRecital] = useState<Recital | null>(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingRecital, setEditingRecital] = useState<Recital | null>(null);
@@ -106,21 +115,6 @@ export default function RecitalView() {
     // Editing participant piece
     const [editingParticipantId, setEditingParticipantId] = useState<string | number | null>(null);
     const [editingPieceValue, setEditingPieceValue] = useState("");
-
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        setLoading(true);
-        const [recitalData, studentData] = await Promise.all([
-            getRecitals(),
-            getStudents(),
-        ]);
-        setRecitals(recitalData);
-        setStudents(studentData);
-        setLoading(false);
-    };
 
     const handleSaveRecital = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -140,7 +134,7 @@ export default function RecitalView() {
             };
 
             await saveRecital(recitalData);
-            await loadData();
+            await mutateRecitals();
             setIsAddModalOpen(false);
             setEditingRecital(null);
         } finally {
@@ -151,8 +145,9 @@ export default function RecitalView() {
     const handleDeleteRecital = async (recitalId: number) => {
         if (!confirm("この発表会を削除しますか？")) return;
         await deleteRecital(recitalId);
+        await mutateRecitals();
         setSelectedRecital(null);
-        await loadData();
+        await mutateRecitals();
     };
 
     const handleAddParticipant = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -220,7 +215,7 @@ export default function RecitalView() {
 
             await saveRecital(updatedRecital);
             setSelectedRecital(updatedRecital);
-            await loadData();
+            await mutateRecitals();
             setIsAddParticipantModalOpen(false);
             setUseCustomName(false);
         } finally {
@@ -266,7 +261,7 @@ export default function RecitalView() {
 
             await saveRecital(updatedRecital);
             setSelectedRecital(updatedRecital);
-            await loadData();
+            await mutateRecitals();
             setEditingParticipantId(null);
             setEditingPieceValue("");
         } finally {
@@ -285,7 +280,7 @@ export default function RecitalView() {
         const updatedRecital = { ...selectedRecital, participants: updatedParticipants };
         await saveRecital(updatedRecital);
         setSelectedRecital(updatedRecital);
-        await loadData();
+        await mutateRecitals();
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
@@ -306,7 +301,7 @@ export default function RecitalView() {
             const updatedRecital = { ...selectedRecital, participants: updatedParticipants };
             setSelectedRecital(updatedRecital); // Optimistic update
             await saveRecital(updatedRecital);
-            await loadData();
+            await mutateRecitals();
         }
     };
 
@@ -331,7 +326,7 @@ export default function RecitalView() {
                 </button>
             </header>
 
-            {loading ? (
+            {isLoading ? (
                 <div className="text-center py-12 text-t-muted">読み込み中...</div>
             ) : recitals.length === 0 ? (
                 <div className="glass-card p-12 text-center">

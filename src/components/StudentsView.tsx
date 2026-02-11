@@ -411,21 +411,27 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                             <div className="flex items-start gap-4">
                                 <div className={`w-14 h-14 rounded-xl ${student.color} flex items-center justify-center text-white font-bold text-xl shadow-lg`}>{student.name[0]}</div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <p className="font-semibold text-lg truncate">{student.name}</p>
-                                        {student.gradeLevel && <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">{student.gradeLevel}</span>}
-                                        {student.status && student.status !== "継続中" && (
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${student.status === "休会中" ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400"}`}>{student.status}</span>
-                                        )}
-                                        {student.paymentType && (
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${student.paymentType === "monthly" ? "bg-emerald-500/20 text-emerald-600" : "bg-orange-500/20 text-orange-600"}`}>
-                                                {student.paymentType === "monthly" ? "月謝" : "都度"}
-                                            </span>
-                                        )}
-                                        {student.archived && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">アーカイブ</span>}
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <p className="font-semibold text-lg truncate">{student.name}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {student.gradeLevel && <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full whitespace-nowrap shrink-0">{student.gradeLevel}</span>}
+                                            {student.paymentType && (
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${student.paymentType === "monthly" ? "bg-emerald-500/20 text-emerald-600" : "bg-orange-500/20 text-orange-600"}`}>
+                                                    {student.paymentType === "monthly" ? "月謝" : "都度"}
+                                                </span>
+                                            )}
+                                            {student.status && student.status !== "継続中" && (
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${student.status === "休会中" ? "bg-amber-500/20 text-amber-400" : "bg-rose-500/20 text-rose-400"}`}>{student.status}</span>
+                                            )}
+                                            {student.archived && <span className="text-xs px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full">アーカイブ</span>}
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-1"><Calendar className="w-3.5 h-3.5" />{student.lessonDay}</p>
-                                    <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-0.5"><MapPin className="w-3.5 h-3.5" />{student.address}</p>
+                                    <div className="mt-2 space-y-0.5">
+                                        <p className="text-sm text-gray-500 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 shrink-0" />{student.lessonDay}</p>
+                                        <p className="text-sm text-gray-400 flex items-center gap-1.5 min-w-0"><MapPin className="w-3.5 h-3.5 shrink-0" /><span className="truncate">{student.address}</span></p>
+                                    </div>
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-t-muted group-hover:text-accent" />
                             </div>

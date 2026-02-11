@@ -25,6 +25,7 @@ import "jspdf-autotable";
 import { getStudents, Student } from "../actions/studentActions";
 import { getLessons, CalendarEvent } from "../actions/calendarActions";
 import { ChartColors } from "../lib/chartColors";
+import { generateInvoicePDF, generateReceiptPDF } from "../lib/pdfGenerator";
 
 type TabType = "transactions" | "lessons" | "chart" | "invoice" | "annual";
 
@@ -45,6 +46,8 @@ export default function FinanceView() {
     const [invoiceStudent, setInvoiceStudent] = useState<Student | null>(null);
     const [invoiceAmount, setInvoiceAmount] = useState("10000");
     const [invoiceMonth, setInvoiceMonth] = useState(new Date().getMonth() + 1);
+    const [invoiceDescription, setInvoiceDescription] = useState("");
+    const [documentType, setDocumentType] = useState<"invoice" | "receipt">("invoice");
     const [annualYear, setAnnualYear] = useState(new Date().getFullYear());
 
     // SWR Fetchers
@@ -207,31 +210,41 @@ export default function FinanceView() {
         document.body.removeChild(link);
     };
 
-    // ... (handleExportCSV remains same)
+    // PDF生成関数
+    const handleGeneratePDF = async () => {
+        if (!invoiceStudent) {
+            alert("生徒を選択してください");
+            return;
+        }
 
-    const generateInvoicePDF = () => {
-        if (!invoiceStudent) return;
+        const amount = parseInt(invoiceAmount);
+        if (isNaN(amount) || amount <= 0) {
+            alert("有効な金額を入力してください");
+            return;
+        }
 
-        const doc = new jsPDF();
-        const fontUrl = "/fonts/SawarabiGothic-Regular.ttf"; // Use existing font
+        const issueDate = new Date().toLocaleDateString("ja-JP");
 
-        // For now, using standard font to avoid complexity if custom font loading fails
-        // In a real app, we would load the font. Assuming existing logic used standard or successfully loaded.
-        // Let's implement a basic version that renders text.
-        // Note: jsPDF default fonts don't support Japanese.
-        // We need to add the font.
-        // Since I cannot easily add a font file in this environment without it being present,
-        // I will assume the user has the font or I will use a logic that tries to use it.
-        // However, looking at previous context, there was a task "Fixing PDF Text Encoding".
-        // I should try to use the font if available.
-
-        // Simplified implementation to fix build error first.
-        doc.setFontSize(20);
-        doc.text(`Invoice - ${invoiceStudent.name}`, 10, 20);
-        doc.setFontSize(12);
-        doc.text(`Month: ${invoiceMonth}`, 10, 30);
-        doc.text(`Amount: ${invoiceAmount} Yen`, 10, 40);
-        doc.save(`invoice_${invoiceStudent.name}_${invoiceMonth}.pdf`);
+        if (documentType === "invoice") {
+            // 請求書生成
+            await generateInvoicePDF({
+                studentName: invoiceStudent.name,
+                amount,
+                issueDate,
+                targetMonth: invoiceMonth.toString(),
+                description: invoiceDescription || undefined,
+                paymentType: invoiceStudent.paymentType || "monthly",
+            });
+        } else {
+            // 領収書生成
+            const description = invoiceDescription || `${invoiceMonth}月分レッスン料として`;
+            await generateReceiptPDF({
+                studentName: invoiceStudent.name,
+                amount,
+                issueDate,
+                description,
+            });
+        }
     };
 
     const generateAnnualReportPDF = () => {
@@ -484,7 +497,7 @@ export default function FinanceView() {
                     <BarChart3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />グラフ
                 </button>
                 <button onClick={() => setActiveTab("invoice")} className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === "invoice" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
-                    <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />請求書
+                    <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />請求書・領収書
                 </button>
                 <button onClick={() => setActiveTab("annual")} className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm whitespace-nowrap ${activeTab === "annual" ? "bg-accent-bg text-accent" : "text-t-secondary hover:text-t-primary hover:bg-accent-bg-hover"}`}>
                     <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />年間レポート
@@ -791,29 +804,157 @@ export default function FinanceView() {
             )}
 
             {activeTab === "invoice" && (
-                <div className="glass-card p-6 max-w-md">
-                    <h3 className="font-semibold text-lg mb-6 text-gray-700">PDF請求書を生成</h3>
+                <div className="glass-card p-6 max-w-2xl mx-auto">
+                    <h3 className="font-semibold text-xl mb-6 text-t-primary">請求書・領収書の発行</h3>
+
+                    {/* ドキュメントタイプ選択 */}
+                    <div className="flex gap-2 p-1 bg-accent-bg rounded-xl mb-6">
+                        <button
+                            type="button"
+                            onClick={() => setDocumentType("invoice")}
+                            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                                documentType === "invoice"
+                                    ? "bg-blue-100 text-blue-700 shadow-sm"
+                                    : "text-t-secondary hover:bg-accent-bg-hover"
+                            }`}
+                        >
+                            請求書
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDocumentType("receipt")}
+                            className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                                documentType === "receipt"
+                                    ? "bg-green-100 text-green-700 shadow-sm"
+                                    : "text-t-secondary hover:bg-accent-bg-hover"
+                            }`}
+                        >
+                            領収書
+                        </button>
+                    </div>
+
                     <div className="space-y-5">
                         <div>
-                            <label className="block text-sm font-medium text-t-secondary mb-2">生徒を選択</label>
-                            <select value={invoiceStudent?.id || ""} onChange={(e) => setInvoiceStudent(students.find((s) => s.id === parseInt(e.target.value)) || null)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
+                            <label className="block text-sm font-medium text-t-secondary mb-2">
+                                生徒を選択 <span className="text-rose-500">*</span>
+                            </label>
+                            <select
+                                value={invoiceStudent?.id || ""}
+                                onChange={(e) => {
+                                    const student = students.find((s) => s.id === parseInt(e.target.value)) || null;
+                                    setInvoiceStudent(student);
+                                    if (student && student.monthlyFee) {
+                                        setInvoiceAmount(student.monthlyFee.toString());
+                                    }
+                                }}
+                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
+                            >
                                 <option value="">選択してください</option>
-                                {students.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                {students
+                                    .filter((s) => !s.archived)
+                                    .map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name} ({s.paymentType === "monthly" ? "月謝制" : "都度払い"})
+                                        </option>
+                                    ))}
                             </select>
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-t-secondary mb-2">対象月</label>
-                            <select value={invoiceMonth} onChange={(e) => setInvoiceMonth(parseInt(e.target.value))} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => <option key={m} value={m}>{m}月</option>)}
+                            <label className="block text-sm font-medium text-t-secondary mb-2">
+                                対象月
+                            </label>
+                            <select
+                                value={invoiceMonth}
+                                onChange={(e) => setInvoiceMonth(parseInt(e.target.value))}
+                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
+                            >
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                                    <option key={m} value={m}>
+                                        {m}月
+                                    </option>
+                                ))}
                             </select>
                         </div>
+
                         <div>
-                            <label className="block text-sm font-medium text-t-secondary mb-2">金額</label>
-                            <input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus" />
+                            <label className="block text-sm font-medium text-t-secondary mb-2">
+                                金額（円） <span className="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="number"
+                                value={invoiceAmount}
+                                onChange={(e) => setInvoiceAmount(e.target.value)}
+                                placeholder="10000"
+                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
+                            />
                         </div>
-                        <button onClick={generateInvoicePDF} disabled={!invoiceStudent} className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 flex items-center justify-center gap-2">
-                            <FileDown className="w-5 h-5" />PDFをダウンロード
+
+                        <div>
+                            <label className="block text-sm font-medium text-t-secondary mb-2">
+                                {documentType === "invoice" ? "請求内容" : "但し書き"}
+                                <span className="text-xs text-t-muted ml-2">（オプション）</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={invoiceDescription}
+                                onChange={(e) => setInvoiceDescription(e.target.value)}
+                                placeholder={
+                                    documentType === "invoice"
+                                        ? "例: 2月分レッスン料"
+                                        : "例: 2月分レッスン料として"
+                                }
+                                className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus"
+                            />
+                            <p className="text-xs text-t-muted mt-1">
+                                空欄の場合は自動的に生成されます
+                            </p>
+                        </div>
+
+                        {invoiceStudent && (
+                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                <h4 className="text-sm font-semibold text-blue-900 mb-2">プレビュー</h4>
+                                <div className="text-sm text-blue-800 space-y-1">
+                                    <p>
+                                        <span className="font-medium">生徒名:</span> {invoiceStudent.name} 様
+                                    </p>
+                                    <p>
+                                        <span className="font-medium">金額:</span> ¥
+                                        {parseInt(invoiceAmount || "0").toLocaleString()}
+                                    </p>
+                                    <p>
+                                        <span className="font-medium">対象:</span> {invoiceMonth}月分
+                                    </p>
+                                    <p>
+                                        <span className="font-medium">種類:</span>{" "}
+                                        {documentType === "invoice" ? "請求書" : "領収書"}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleGeneratePDF}
+                            disabled={!invoiceStudent}
+                            className="w-full py-4 premium-gradient rounded-xl font-bold text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:shadow-xl transition-all"
+                        >
+                            <FileDown className="w-5 h-5" />
+                            {documentType === "invoice" ? "請求書" : "領収書"}をダウンロード
                         </button>
+
+                        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                            <h4 className="text-sm font-semibold text-yellow-900 mb-2">⚠️ 重要な注意事項</h4>
+                            <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                                <li>
+                                    発行者情報（教室名、住所、電話番号など）は src/lib/schoolConfig.ts
+                                    で設定してください
+                                </li>
+                                <li>
+                                    領収書には印鑑欄があります。必要に応じて印刷後に押印してください
+                                </li>
+                                <li>生成されたPDFは法的に有効な形式ですが、内容の正確性をご確認ください</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             )}

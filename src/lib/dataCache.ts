@@ -13,6 +13,17 @@ interface CacheEntry<T> {
 const cache: Map<string, CacheEntry<unknown>> = new Map();
 const DEFAULT_TTL = 30 * 1000; // 30 seconds
 
+// データタイプ別の最適なTTL設定
+export const CACHE_TTL = {
+    STUDENTS: 60 * 1000,        // 60秒 - 生徒情報（適度な更新頻度）
+    TEXTBOOKS: 60 * 1000,       // 60秒 - 教本（あまり変更されない）
+    TRANSACTIONS: 60 * 1000,    // 60秒 - 取引（適度な更新頻度）
+    LESSONS: 30 * 1000,         // 30秒 - レッスン（頻繁に確認）
+    RECITALS: 120 * 1000,       // 2分 - 発表会（たまに更新）
+    SHEET_MUSIC: 300 * 1000,    // 5分 - 楽譜ライブラリ（ほとんど変更なし）
+    TEMPLATES: 300 * 1000,      // 5分 - テンプレート（ほとんど変更なし）
+} as const;
+
 export function getCachedData<T>(key: string, ttl: number = DEFAULT_TTL): T | null {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.timestamp < ttl) {
@@ -41,6 +52,8 @@ export const CACHE_KEYS = {
     TEMPLATES: "templates",
     TRANSACTIONS: "transactions",
     LESSONS: "lessons", // Base key for calendar events
+    RECITALS: "recitals",
+    SHEET_MUSIC: "sheet_music",
 } as const;
 
 // Helper to generate date-specific cache keys for lessons

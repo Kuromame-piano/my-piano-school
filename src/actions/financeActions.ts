@@ -1,6 +1,9 @@
 "use server";
 
+
+import { revalidatePath } from "next/cache";
 import { getSheetsClient, SPREADSHEET_ID } from "../lib/google";
+
 
 export interface Transaction {
     id: number;
@@ -22,6 +25,7 @@ export interface TuitionPayment {
     paidDate?: string;
     amount: number;
     memo?: string;
+    transactionId?: number;
 }
 
 // Per-lesson payment for 都度払い
@@ -34,18 +38,19 @@ export interface LessonPayment {
     paid: boolean;
     paidDate?: string;
     memo?: string;
+    transactionId?: number;
 }
 
 const FINANCE_SHEET = "Finance";
 const TUITION_SHEET = "TuitionPayments";
 const LESSON_PAYMENTS_SHEET = "LessonPayments";
 
-import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS } from "../lib/dataCache";
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 // Get all transactions
 export async function getTransactions(): Promise<Transaction[]> {
-    // Mobile optimization: Cache for 5 minutes (300,000ms) to reduce data usage
-    const cached = getCachedData<Transaction[]>(CACHE_KEYS.TRANSACTIONS, 5 * 60 * 1000);
+    // Mobile optimization: Cache for 60 seconds to reduce data usage
+    const cached = getCachedData<Transaction[]>(CACHE_KEYS.TRANSACTIONS, CACHE_TTL.TRANSACTIONS);
     if (cached) return cached;
 
     try {
@@ -117,6 +122,7 @@ export async function getMonthlySummary(monthsBack: number = 12): Promise<{ mont
 }
 
 // Add transaction
+// Add transaction
 export async function addTransaction(transaction: Transaction) {
     try {
         const sheets = await getSheetsClient();
@@ -141,6 +147,7 @@ export async function addTransaction(transaction: Transaction) {
         });
 
         invalidateCache(CACHE_KEYS.TRANSACTIONS);
+        revalidatePath("/");
         return { success: true };
     } catch (error) {
         console.error("Error adding transaction:", error);
@@ -148,6 +155,7 @@ export async function addTransaction(transaction: Transaction) {
     }
 }
 
+// Update transaction
 // Update transaction
 export async function updateTransaction(transaction: Transaction) {
     try {
@@ -187,6 +195,7 @@ export async function updateTransaction(transaction: Transaction) {
         });
 
         invalidateCache(CACHE_KEYS.TRANSACTIONS);
+        revalidatePath("/");
         return { success: true };
     } catch (error) {
         console.error("Error updating transaction:", error);
@@ -194,6 +203,7 @@ export async function updateTransaction(transaction: Transaction) {
     }
 }
 
+// Delete transaction
 // Delete transaction
 export async function deleteTransaction(transactionId: number) {
     try {
@@ -237,6 +247,7 @@ export async function deleteTransaction(transactionId: number) {
         });
 
         invalidateCache(CACHE_KEYS.TRANSACTIONS);
+        revalidatePath("/");
         return { success: true };
     } catch (error) {
         console.error("Error deleting transaction:", error);
@@ -257,7 +268,7 @@ export async function getTuitionPayments(year: number, month: number): Promise<T
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `'${TUITION_SHEET}'!A2:G`,
+            range: `'${TUITION_SHEET}'!A2:I`,
         });
 
         const rows = response.data.values;
@@ -274,6 +285,7 @@ export async function getTuitionPayments(year: number, month: number): Promise<T
                 paidDate: row[5] || undefined,
                 amount: Number(row[6]) || 0,
                 memo: row[7] || "",
+                transactionId: row[8] ? Number(row[8]) : undefined,
             }));
 
         setCachedData(cacheKey, payments);
@@ -300,6 +312,7 @@ async function createAutoTransaction(description: string, amount: number, date: 
         studentId,
     };
     await addTransaction(transaction);
+    return transaction.id;
 }
 
 async function removeAutoTransaction(description: string) {
@@ -338,6 +351,37 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
         // Check previous paid status
         const wasPaid = existingIndex !== -1 && (rows[existingIndex][4] === "TRUE" || rows[existingIndex][4] === "true");
 
+        // Auto-transaction: create or remove
+        const txDescription = `${payment.studentName} 月謝 ${payment.year}/${payment.month}月`;
+        let newTransactionId = payment.transactionId;
+
+        if (payment.paid && !wasPaid) {
+            // Newly paid → create income transaction
+            const txDate = payment.paidDate || new Date().toISOString().split("T")[0];
+            newTransactionId = await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
+            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
+        } else if (!payment.paid && wasPaid) {
+            // Unpaid → remove auto transaction
+            if (payment.transactionId) {
+                await deleteTransaction(payment.transactionId);
+            } else {
+                // Fallback for old data
+                await removeAutoTransaction(txDescription);
+            }
+            newTransactionId = undefined;
+            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
+        } else if (payment.paid && wasPaid && payment.transactionId) {
+            // Amount/Memo update might need transaction update?
+            // For now, if just Paid status didn't change, we assume transaction doesn't need re-linking, 
+            // but if Amount changed, we ideally update the transaction too.
+            // Let's implement amount update for robustness if we have ID.
+            const transactions = await getTransactions();
+            const existingTx = transactions.find(t => t.id === payment.transactionId);
+            if (existingTx && existingTx.amount !== payment.amount) {
+                await updateTransaction({ ...existingTx, amount: payment.amount });
+            }
+        }
+
         const rowData = [
             payment.studentId,
             payment.studentName,
@@ -347,6 +391,7 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
             payment.paidDate || "",
             payment.amount,
             payment.memo || "",
+            newTransactionId || ""
         ];
 
         if (existingIndex !== -1) {
@@ -354,7 +399,7 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `'${TUITION_SHEET}'!A${rowNumber}:H${rowNumber}`,
+                range: `'${TUITION_SHEET}'!A${rowNumber}:I${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],
@@ -372,21 +417,9 @@ export async function saveTuitionPayment(payment: TuitionPayment) {
             });
         }
 
-        // Auto-transaction: create or remove
-        const txDescription = `${payment.studentName} 月謝 ${payment.year}/${payment.month}月`;
-        if (payment.paid && !wasPaid) {
-            // Newly paid → create income transaction
-            const txDate = payment.paidDate || new Date().toISOString().split("T")[0];
-            await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
-            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
-        } else if (!payment.paid && wasPaid) {
-            // Unpaid → remove auto transaction
-            await removeAutoTransaction(txDescription);
-            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
-        }
-
         // Invalidate specific cache
         invalidateCache(`tuition_${payment.year}_${payment.month}`);
+        revalidatePath("/");
 
         return { success: true };
     } catch (error) {
@@ -408,7 +441,7 @@ export async function getLessonPayments(year: number, month: number): Promise<Le
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${LESSON_PAYMENTS_SHEET}!A2:H`,
+            range: `${LESSON_PAYMENTS_SHEET}!A2:I`,
         });
 
         const rows = response.data.values;
@@ -428,6 +461,7 @@ export async function getLessonPayments(year: number, month: number): Promise<Le
                 paid: row[5] === "TRUE" || row[5] === "true",
                 paidDate: row[6] || undefined,
                 memo: row[7] || "",
+                transactionId: row[8] ? Number(row[8]) : undefined,
             }));
 
         setCachedData(cacheKey, payments);
@@ -455,6 +489,32 @@ export async function saveLessonPayment(payment: LessonPayment) {
         // Check previous paid status
         const wasPaid = existingIndex !== -1 && (rows[existingIndex][5] === "TRUE" || rows[existingIndex][5] === "true");
 
+        // Auto-transaction: create or remove
+        const txDescription = `${payment.studentName} レッスン料 ${payment.lessonDate}`;
+        let newTransactionId = payment.transactionId;
+
+        if (payment.paid && !wasPaid) {
+            // Newly paid → create income transaction
+            const txDate = payment.paidDate || payment.lessonDate;
+            newTransactionId = await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
+            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
+        } else if (!payment.paid && wasPaid) {
+            // Unpaid → remove auto transaction
+            if (payment.transactionId) {
+                await deleteTransaction(payment.transactionId);
+            } else {
+                await removeAutoTransaction(txDescription);
+            }
+            newTransactionId = undefined;
+            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
+        } else if (payment.paid && wasPaid && payment.transactionId) {
+            const transactions = await getTransactions();
+            const existingTx = transactions.find(t => t.id === payment.transactionId);
+            if (existingTx && existingTx.amount !== payment.amount) {
+                await updateTransaction({ ...existingTx, amount: payment.amount });
+            }
+        }
+
         const rowData = [
             payment.id,
             payment.studentId,
@@ -464,6 +524,7 @@ export async function saveLessonPayment(payment: LessonPayment) {
             payment.paid,
             payment.paidDate || "",
             payment.memo || "",
+            newTransactionId || ""
         ];
 
         if (existingIndex !== -1) {
@@ -471,7 +532,7 @@ export async function saveLessonPayment(payment: LessonPayment) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${LESSON_PAYMENTS_SHEET}!A${rowNumber}:H${rowNumber}`,
+                range: `${LESSON_PAYMENTS_SHEET}!A${rowNumber}:I${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],
@@ -489,22 +550,10 @@ export async function saveLessonPayment(payment: LessonPayment) {
             });
         }
 
-        // Auto-transaction: create or remove
-        const txDescription = `${payment.studentName} レッスン料 ${payment.lessonDate}`;
-        if (payment.paid && !wasPaid) {
-            // Newly paid → create income transaction
-            const txDate = payment.paidDate || payment.lessonDate;
-            await createAutoTransaction(txDescription, payment.amount, txDate, payment.studentName, payment.studentId);
-            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
-        } else if (!payment.paid && wasPaid) {
-            // Unpaid → remove auto transaction
-            await removeAutoTransaction(txDescription);
-            invalidateCache(CACHE_KEYS.TRANSACTIONS); // Invalidate transactions cache
-        }
-
         // Invalidate specific cache for this month
         const date = new Date(payment.lessonDate);
         invalidateCache(`lesson_payments_${date.getFullYear()}_${date.getMonth()}`);
+        revalidatePath("/");
 
         return { success: true };
     } catch (error) {

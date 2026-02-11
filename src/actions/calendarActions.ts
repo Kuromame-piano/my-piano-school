@@ -1,7 +1,7 @@
 "use server";
 
 import { getCalendarClient } from "../lib/google";
-import { getCachedData, setCachedData, getLessonsCacheKey, invalidateLessonsCache } from "../lib/dataCache";
+import { getCachedData, setCachedData, getLessonsCacheKey, invalidateLessonsCache, CACHE_TTL } from "../lib/dataCache";
 
 export interface CalendarEvent {
     id: string;
@@ -27,9 +27,9 @@ export async function getLessons(timeMin?: string, timeMax?: string): Promise<Ca
         const minISO = minDate.toISOString();
         const maxISO = maxDate.toISOString();
 
-        // Check cache first
+        // Check cache first (30秒キャッシュ)
         const cacheKey = getLessonsCacheKey(minISO, maxISO);
-        const cached = getCachedData<CalendarEvent[]>(cacheKey);
+        const cached = getCachedData<CalendarEvent[]>(cacheKey, CACHE_TTL.LESSONS);
         if (cached) {
             return cached;
         }

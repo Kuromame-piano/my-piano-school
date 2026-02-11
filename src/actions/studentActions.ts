@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getSheetsClient, SPREADSHEET_ID } from "../lib/google";
-import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS } from "../lib/dataCache";
+
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 interface Piece {
     id: number;
@@ -41,6 +43,7 @@ export interface Student {
     recitalHistory?: RecitalRecord[];
     paymentType?: "monthly" | "per-lesson";  // 月謝制 or 都度払い
     monthlyFee?: number;  // 月謝額または1レッスンあたりの料金
+    deleted?: boolean; // Soft delete flag
 }
 
 export interface RecitalRecord {
@@ -59,8 +62,8 @@ const NOTES_SHEET = "LessonNotes";
 export async function getStudents(includeArchived: boolean = false): Promise<Student[]> {
     const cacheKey = includeArchived ? CACHE_KEYS.STUDENTS_ALL : CACHE_KEYS.STUDENTS;
 
-    // キャッシュがあれば即時返却
-    const cached = getCachedData<Student[]>(cacheKey);
+    // キャッシュがあれば即時返却（60秒キャッシュ）
+    const cached = getCachedData<Student[]>(cacheKey, CACHE_TTL.STUDENTS);
     if (cached) {
         return cached;
     }
@@ -69,7 +72,7 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A2:R`,
+            range: `${SHEET_NAME}!A2:S`, // Extended range
         });
 
         const rows = response.data.values;
@@ -94,9 +97,14 @@ export async function getStudents(includeArchived: boolean = false): Promise<Stu
             recitalHistory: row[15] ? JSON.parse(row[15]) : [],
             paymentType: (row[16] as "monthly" | "per-lesson") || "monthly",
             monthlyFee: row[17] ? Number(row[17]) : 0,
+            deleted: row[18] === "TRUE" || row[18] === "true",
         }));
 
-        const result = includeArchived ? students : students.filter((s) => !s.archived);
+        // Filter out deleted students first
+        const activeStudents = students.filter((s) => !s.deleted);
+
+        // Then apply archive filter
+        const result = includeArchived ? activeStudents : activeStudents.filter((s) => !s.archived);
 
         // キャッシュに保存
         setCachedData(cacheKey, result);
@@ -139,13 +147,14 @@ export async function saveStudent(student: Student) {
             JSON.stringify(student.recitalHistory || []),
             student.paymentType || "monthly",
             student.monthlyFee || 0,
+            student.deleted || false,
         ];
 
         if (existingIndex !== -1) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${SHEET_NAME}!A${rowNumber}:R${rowNumber}`,
+                range: `${SHEET_NAME}!A${rowNumber}:S${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: {
                     values: [rowData],
@@ -165,6 +174,7 @@ export async function saveStudent(student: Student) {
         // キャッシュを無効化（次回getStudents時に最新データを取得）
         invalidateCache(CACHE_KEYS.STUDENTS);
         invalidateCache(CACHE_KEYS.STUDENTS_ALL);
+        revalidatePath("/");
 
         return { success: true };
     } catch (error) {
@@ -181,7 +191,9 @@ export async function archiveStudent(studentId: number, archive: boolean = true)
             return { success: false, error: "Student not found" };
         }
         student.archived = archive;
-        return await saveStudent(student);
+        const result = await saveStudent(student);
+        revalidatePath("/");
+        return result;
     } catch (error) {
         console.error("Error archiving student:", error);
         return { success: false, error };
@@ -190,62 +202,39 @@ export async function archiveStudent(studentId: number, archive: boolean = true)
 
 export async function deleteStudent(studentId: number) {
     try {
-        const sheets = await getSheetsClient();
+        // Soft delete implementation: just mark as deleted
+        // We do NOT delete from other sheets (payments, etc.) to preserve history.
+        // The getStudents filter will hide them from the UI.
 
-        // Find the row index for the student
-        const idsResponse = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_NAME}!A2:A`,
-        });
-        const ids = idsResponse.data.values?.map(row => Number(row[0])) || [];
-        const existingIndex = ids.findIndex((id) => id === studentId);
+        const students = await getStudents(true); // Get all, including archived/deleted(if we didn't filter them out yet, but we updated getStudents to filter deleted out...)
+        // Wait, if we updated getStudents to filter out deleted, we can't fetch them if they are already deleted?
+        // But here we are deleting an EXISTING student.
+        // However, getStudents(true) now filters out deleted students.
+        // So this is safe for deleting visible students.
 
-        if (existingIndex === -1) {
+        const student = students.find((s) => s.id === studentId);
+
+        if (!student) {
             return { success: false, error: "Student not found" };
         }
 
-        const spreadsheet = await sheets.spreadsheets.get({
-            spreadsheetId: SPREADSHEET_ID,
-        });
+        // Mark as deleted
+        student.deleted = true;
 
-        const sheet = spreadsheet.data.sheets?.find((s) => s.properties?.title === SHEET_NAME);
-        if (!sheet?.properties?.sheetId) {
-            return { success: false, error: "Sheet not found" };
-        }
+        // Save
+        const result = await saveStudent(student);
 
-        const rowNumber = existingIndex + 2;
-
-        // Delete the student row
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            requestBody: {
-                requests: [
-                    {
-                        deleteDimension: {
-                            range: {
-                                sheetId: sheet.properties.sheetId,
-                                dimension: "ROWS",
-                                startIndex: rowNumber - 1,
-                                endIndex: rowNumber,
-                            },
-                        },
-                    },
-                ],
-            },
-        });
-
-        // Also delete all lesson notes for this student
-        // Note connection is weak (just studentId in distinct sheet), so we should clean them up
-        // For now, let's just invalidate cache and return success. 
-        // A full cleanup of relation data might be complex to do atomically with Sheets without transactions.
-        // Given the scale, leaving orphaned notes is acceptable for now, or we can implement it if needed.
-        // The requirement was just "delete student", usually implying the main record.
-
-        // Cache invalidation
+        // Clear caches
         invalidateCache(CACHE_KEYS.STUDENTS);
         invalidateCache(CACHE_KEYS.STUDENTS_ALL);
+        invalidateCache("recitals"); // Potentially need to refresh recitals if we filter there too?
+        // Actually, if recitals display student names by fetching students, they will disappear.
+        // If they use a stored name, it might persist. 
+        // But RecitalView fetches students to match IDs.
 
-        return { success: true };
+        revalidatePath("/");
+
+        return result;
     } catch (error) {
         console.error("Error deleting student:", error);
         return { success: false, error };
