@@ -1,6 +1,7 @@
 "use server";
 
 import { getSheetsClient, SPREADSHEET_ID } from "../lib/google";
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 export interface SheetMusic {
     id: number;
@@ -25,6 +26,12 @@ const ASSIGNMENTS_SHEET = "SheetMusicAssignments";
 
 // Get all sheet music
 export async function getSheetMusic(): Promise<SheetMusic[]> {
+    // キャッシュがあれば即時返却（5分キャッシュ）
+    const cached = getCachedData<SheetMusic[]>(CACHE_KEYS.SHEET_MUSIC, CACHE_TTL.SHEET_MUSIC);
+    if (cached) {
+        return cached;
+    }
+
     try {
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
@@ -35,7 +42,7 @@ export async function getSheetMusic(): Promise<SheetMusic[]> {
         const rows = response.data.values;
         if (!rows) return [];
 
-        return rows.map((row) => ({
+        const result = rows.map((row) => ({
             id: Number(row[0]),
             title: row[1] || "",
             composer: row[2] || "",
@@ -44,6 +51,11 @@ export async function getSheetMusic(): Promise<SheetMusic[]> {
             pdfUrl: row[5] || "",
             notes: row[6] || "",
         }));
+
+        // キャッシュに保存
+        setCachedData(CACHE_KEYS.SHEET_MUSIC, result);
+
+        return result;
     } catch (error) {
         console.error("Error fetching sheet music:", error);
         return [];
@@ -83,6 +95,10 @@ export async function saveSheetMusic(music: SheetMusic) {
                 requestBody: { values: [rowData] },
             });
         }
+
+        // キャッシュを無効化
+        invalidateCache(CACHE_KEYS.SHEET_MUSIC);
+
         return { success: true };
     } catch (error) {
         console.error("Error saving sheet music:", error);
@@ -124,6 +140,10 @@ export async function deleteSheetMusic(musicId: number) {
                 }],
             },
         });
+
+        // キャッシュを無効化
+        invalidateCache(CACHE_KEYS.SHEET_MUSIC);
+
         return { success: true };
     } catch (error) {
         console.error("Error deleting sheet music:", error);

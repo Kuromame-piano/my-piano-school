@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSheetsClient, SPREADSHEET_ID } from "../lib/google";
 
-import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS } from "../lib/dataCache";
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 interface Piece {
     id: number;
@@ -62,8 +62,8 @@ const NOTES_SHEET = "LessonNotes";
 export async function getStudents(includeArchived: boolean = false): Promise<Student[]> {
     const cacheKey = includeArchived ? CACHE_KEYS.STUDENTS_ALL : CACHE_KEYS.STUDENTS;
 
-    // キャッシュがあれば即時返却
-    const cached = getCachedData<Student[]>(cacheKey);
+    // キャッシュがあれば即時返却（60秒キャッシュ）
+    const cached = getCachedData<Student[]>(cacheKey, CACHE_TTL.STUDENTS);
     if (cached) {
         return cached;
     }

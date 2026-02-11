@@ -4,10 +4,15 @@ import { useState, useEffect } from "react";
 import { Plus, Search, X, Music, User, Star, FileText, Pencil, Trash2, ExternalLink, Library } from "lucide-react";
 import { getSheetMusic, saveSheetMusic, deleteSheetMusic, SheetMusic } from "../actions/sheetMusicActions";
 import { getStudents, Student } from "../actions/studentActions";
+import useSWR from "swr";
 
 export default function SheetMusicView() {
-    const [sheetMusic, setSheetMusic] = useState<SheetMusic[]>([]);
-    const [loading, setLoading] = useState(true);
+    // SWR for data fetching
+    const { data: sheetMusic = [], mutate: mutateSheetMusic, isLoading } = useSWR(
+        ['sheetMusic'],
+        getSheetMusic
+    );
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"title" | "composer" | "difficulty" | "genre">("title");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
@@ -15,17 +20,6 @@ export default function SheetMusicView() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [editingMusic, setEditingMusic] = useState<SheetMusic | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const loadData = async () => {
-        setLoading(true);
-        const musicData = await getSheetMusic();
-        setSheetMusic(musicData);
-        setLoading(false);
-    };
 
     const handleSelectMusic = (music: SheetMusic) => {
         setSelectedMusic(music);
@@ -62,7 +56,7 @@ export default function SheetMusicView() {
             };
 
             await saveSheetMusic(musicData);
-            await loadData();
+            await mutateSheetMusic();
             setIsAddModalOpen(false);
             setEditingMusic(null);
         } finally {
@@ -73,8 +67,8 @@ export default function SheetMusicView() {
     const handleDeleteMusic = async (musicId: number) => {
         if (!confirm("この楽譜を削除しますか？")) return;
         await deleteSheetMusic(musicId);
+        await mutateSheetMusic();
         setSelectedMusic(null);
-        await loadData();
     };
 
 
@@ -120,7 +114,7 @@ export default function SheetMusicView() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Music List */}
                 <div className="lg:col-span-2 space-y-3">
-                    {loading ? (
+                    {isLoading ? (
                         <div className="text-center py-12 text-t-muted">読み込み中...</div>
                     ) : filteredMusic.length === 0 ? (
                         <div className="glass-card p-12 text-center">

@@ -45,12 +45,12 @@ const FINANCE_SHEET = "Finance";
 const TUITION_SHEET = "TuitionPayments";
 const LESSON_PAYMENTS_SHEET = "LessonPayments";
 
-import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS } from "../lib/dataCache";
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 // Get all transactions
 export async function getTransactions(): Promise<Transaction[]> {
-    // Mobile optimization: Cache for 5 minutes (300,000ms) to reduce data usage
-    const cached = getCachedData<Transaction[]>(CACHE_KEYS.TRANSACTIONS, 5 * 60 * 1000);
+    // Mobile optimization: Cache for 60 seconds to reduce data usage
+    const cached = getCachedData<Transaction[]>(CACHE_KEYS.TRANSACTIONS, CACHE_TTL.TRANSACTIONS);
     if (cached) return cached;
 
     try {

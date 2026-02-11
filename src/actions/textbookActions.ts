@@ -1,7 +1,7 @@
 "use server";
 
 import { getSheetsClient, SPREADSHEET_ID } from "../lib/google";
-import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS } from "../lib/dataCache";
+import { getCachedData, setCachedData, invalidateCache, CACHE_KEYS, CACHE_TTL } from "../lib/dataCache";
 
 export interface Textbook {
     id: number;
@@ -27,8 +27,8 @@ const PROGRESS_SHEET = "TextbookProgress";
 
 // Master Data: Textbooks
 export async function getTextbooks(): Promise<Textbook[]> {
-    // キャッシュがあれば即時返却
-    const cached = getCachedData<Textbook[]>(CACHE_KEYS.TEXTBOOKS);
+    // キャッシュがあれば即時返却（60秒キャッシュ）
+    const cached = getCachedData<Textbook[]>(CACHE_KEYS.TEXTBOOKS, CACHE_TTL.TEXTBOOKS);
     if (cached) {
         return cached;
     }
