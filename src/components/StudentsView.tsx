@@ -41,6 +41,7 @@ import {
     RecitalRecord,
 } from "../actions/studentActions";
 import { getSheetMusic, SheetMusic } from "../actions/sheetMusicActions";
+import { getTextbooks, Textbook } from "../actions/textbookActions";
 import { ChartColors } from "../lib/chartColors";
 
 type DetailTab = "active" | "completed" | "notes" | "progress" | "recital";
@@ -70,6 +71,11 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
     const { data: sheetMusicLibrary = [] } = useSWR(
         ['sheetMusic'],
         getSheetMusic
+    );
+
+    const { data: textbooks = [] } = useSWR(
+        ['textbooks'],
+        getTextbooks
     );
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -169,6 +175,32 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
             pieces: student.pieces.map((p) =>
                 p.id === pieceId ? { ...p, status: "completed" as const, progress: 100, completedAt: today } : p
             ),
+        };
+
+        const updatedStudentsList = students.map((s) => (s.id === studentId ? updatedStudent : s));
+        mutateStudents(updatedStudentsList, false);
+
+        if (selectedStudent?.id === studentId) {
+            setSelectedStudent(updatedStudent);
+        }
+
+        try {
+            await saveStudent(updatedStudent);
+            mutateStudents();
+        } catch (error) {
+            mutateStudents();
+        }
+    };
+
+    const handleDeletePiece = async (studentId: number, pieceId: number) => {
+        if (!confirm("この曲を削除しますか？")) return;
+
+        const student = students.find((s) => s.id === studentId);
+        if (!student) return;
+
+        const updatedStudent = {
+            ...student,
+            pieces: student.pieces.filter((p) => p.id !== pieceId),
         };
 
         const updatedStudentsList = students.map((s) => (s.id === studentId ? updatedStudent : s));
@@ -544,10 +576,22 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                                                         )}
                                                         <div>
                                                             <h4 className="font-semibold text-lg">{piece.title}</h4>
-                                                            <p className="text-sm text-t-secondary">開始: {piece.startedAt}</p>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <p className="text-sm text-t-secondary">開始: {piece.startedAt}</p>
+                                                                {piece.sheetMusicId && (() => {
+                                                                    const music = sheetMusicLibrary.find(m => m.id === piece.sheetMusicId);
+                                                                    const tb = music?.textbookId ? textbooks.find(t => t.id === music.textbookId) : null;
+                                                                    return tb ? (
+                                                                        <span className="text-xs px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded-full">{tb.title}</span>
+                                                                    ) : null;
+                                                                })()}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <button onClick={() => handleCompletePiece(selectedStudent.id, piece.id)} className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg font-medium text-sm transition-colors"><Check className="w-4 h-4" />合格！</button>
+                                                    <div className="flex items-center gap-2">
+                                                        <button onClick={() => handleDeletePiece(selectedStudent.id, piece.id)} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors" title="曲を削除"><Trash2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => handleCompletePiece(selectedStudent.id, piece.id)} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg font-medium text-sm transition-colors"><Check className="w-4 h-4" />合格！</button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))
@@ -588,7 +632,7 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                                                     // データを保存
                                                     await saveStudent(updatedStudent);
                                                 }}
-                                                className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-emerald-100 rounded-lg opacity-0 group-hover/item:opacity-100 transition-all"
+                                                className="p-2 text-emerald-400 hover:text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all"
                                                 title="練習中に戻す"
                                             >
                                                 <History className="w-5 h-5" />
@@ -909,11 +953,34 @@ export default function StudentsView({ initialStudentId, initialTab }: StudentsV
                                     <label className="block text-sm font-medium text-t-secondary mb-2">楽譜を選択 <span className="text-red-500">*</span></label>
                                     <select name="sheetMusicId" required className="w-full px-4 py-3 bg-input-bg border border-input-border rounded-xl text-input-text focus:border-input-border-focus">
                                         <option value="">選択してください</option>
-                                        {sheetMusicLibrary.map((music) => (
-                                            <option key={music.id} value={music.id}>
-                                                {music.title} {music.composer ? `- ${music.composer}` : ""}
-                                            </option>
-                                        ))}
+                                        {textbooks.map(tb => {
+                                            const tbPieces = sheetMusicLibrary
+                                                .filter(m => m.textbookId === tb.id)
+                                                .sort((a, b) => (a.orderInTextbook || 0) - (b.orderInTextbook || 0));
+                                            if (tbPieces.length === 0) return null;
+                                            return (
+                                                <optgroup key={tb.id} label={tb.title}>
+                                                    {tbPieces.map(m => (
+                                                        <option key={m.id} value={m.id}>
+                                                            {m.orderInTextbook ? `${m.orderInTextbook}. ` : ""}{m.title} {m.composer ? `- ${m.composer}` : ""}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            );
+                                        })}
+                                        {(() => {
+                                            const ungrouped = sheetMusicLibrary.filter(m => !m.textbookId);
+                                            if (ungrouped.length === 0) return null;
+                                            return (
+                                                <optgroup label="その他">
+                                                    {ungrouped.map(m => (
+                                                        <option key={m.id} value={m.id}>
+                                                            {m.title} {m.composer ? `- ${m.composer}` : ""}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            );
+                                        })()}
                                     </select>
                                     <input type="hidden" name="title" value="__FROM_LIBRARY__" />
                                 </div>

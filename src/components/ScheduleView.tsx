@@ -653,42 +653,55 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
         dispatch({ type: "SET_CUSTOM_DURATION", duration: numValue });
     };
 
-    const openAddModal = (studentName?: string) => {
+    const openAddModal = (studentName?: string, presetDate?: Date) => {
         setEditingEvent(null);
         setPresetStudentName(studentName || "");
 
         // Smart defaults based on current view and time
         const now = new Date();
 
-        // Round to next hour
-        const nextHour = new Date(now);
-        if (nextHour.getMinutes() > 0) {
-            nextHour.setHours(nextHour.getHours() + 1);
-        }
-        nextHour.setMinutes(0);
-        nextHour.setSeconds(0);
-
-        // Date string YYYY-MM-DD
-        const year = nextHour.getFullYear();
-        const month = String(nextHour.getMonth() + 1).padStart(2, '0');
-        const day = String(nextHour.getDate()).padStart(2, '0');
-        const lessonDate = `${year}-${month}-${day}`;
-
-        // Time string HH:mm
-        const hours = String(nextHour.getHours()).padStart(2, '0');
-        const minutes = String(nextHour.getMinutes()).padStart(2, '0');
-        const startTime = `${hours}:${minutes}`;
-
         // Get last used duration
         const lastDuration = typeof window !== "undefined"
             ? parseInt(localStorage.getItem("lastLessonDuration") || "45")
             : 45;
 
-        // Calculate end time
-        const end = new Date(nextHour.getTime() + lastDuration * 60000);
-        const endHours = String(end.getHours()).padStart(2, '0');
-        const endMinutes = String(end.getMinutes()).padStart(2, '0');
-        const endTime = `${endHours}:${endMinutes}`;
+        let lessonDate: string;
+        let startTime: string;
+        let endTime: string;
+
+        if (presetDate) {
+            // Use the preset date with a sensible default time
+            const year = presetDate.getFullYear();
+            const month = String(presetDate.getMonth() + 1).padStart(2, '0');
+            const day = String(presetDate.getDate()).padStart(2, '0');
+            lessonDate = `${year}-${month}-${day}`;
+            startTime = "10:00";
+            const endMinutes = lastDuration % 60;
+            const endHoursTotal = 10 + Math.floor(lastDuration / 60);
+            endTime = `${String(endHoursTotal).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+        } else {
+            // Round to next hour
+            const nextHour = new Date(now);
+            if (nextHour.getMinutes() > 0) {
+                nextHour.setHours(nextHour.getHours() + 1);
+            }
+            nextHour.setMinutes(0);
+            nextHour.setSeconds(0);
+
+            const year = nextHour.getFullYear();
+            const month = String(nextHour.getMonth() + 1).padStart(2, '0');
+            const day = String(nextHour.getDate()).padStart(2, '0');
+            lessonDate = `${year}-${month}-${day}`;
+
+            const hours = String(nextHour.getHours()).padStart(2, '0');
+            const minutes = String(nextHour.getMinutes()).padStart(2, '0');
+            startTime = `${hours}:${minutes}`;
+
+            const end = new Date(nextHour.getTime() + lastDuration * 60000);
+            const endHours = String(end.getHours()).padStart(2, '0');
+            const endMinutes = String(end.getMinutes()).padStart(2, '0');
+            endTime = `${endHours}:${endMinutes}`;
+        }
 
         dispatch({
             type: "RESET_FORM",
@@ -948,13 +961,25 @@ export default function ScheduleView({ initialStudentName }: { initialStudentNam
                                 const isToday = day.toDateString() === new Date().toDateString();
                                 return (
                                     <div key={i} className={`glass-card p-2 sm:p-3 min-h-[150px] sm:min-h-[300px] ${isToday ? "ring-2 ring-accent" : ""}`}>
-                                        <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-card-border">
+                                        <div className="text-center mb-2 sm:mb-3 pb-1.5 sm:pb-2 border-b border-card-border relative">
                                             <p className="text-xs sm:text-sm text-t-secondary">{dayNames[i]}</p>
                                             <p className={`text-lg sm:text-xl font-bold ${isToday ? "text-accent" : "text-t-primary"}`}>{day.getDate()}</p>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openAddModal(undefined, day); }}
+                                                className="absolute top-0 right-0 p-1 text-t-muted hover:text-accent hover:bg-accent-bg rounded-md transition-colors"
+                                                title="レッスンを追加"
+                                            >
+                                                <Plus className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
                                         <div className="space-y-1.5 sm:space-y-2">
                                             {dayEvents.length === 0 ? (
-                                                <p className="text-xs text-t-muted text-center py-2 sm:py-4">-</p>
+                                                <button
+                                                    onClick={() => openAddModal(undefined, day)}
+                                                    className="w-full text-xs text-t-muted text-center py-2 sm:py-4 hover:text-accent hover:bg-accent-bg/50 rounded-lg transition-colors cursor-pointer"
+                                                >
+                                                    + タップして追加
+                                                </button>
                                             ) : (
                                                 dayEvents.map((event, idx) => (
                                                     <button key={event.id} onClick={() => setSelectedEvent(event)} className={`w-full text-left p-1.5 sm:p-2 rounded-lg ${colors[idx % 5]}/20 border border-${colors[idx % 5].replace("bg-", "")}/30 hover:bg-accent-bg-hover transition-colors`}>

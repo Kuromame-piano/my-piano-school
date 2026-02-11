@@ -11,6 +11,8 @@ export interface SheetMusic {
     genre?: string;      // optional
     pdfUrl?: string;
     notes?: string;
+    textbookId?: number;      // Links to Textbook
+    orderInTextbook?: number; // Ordering within textbook
 }
 
 export interface StudentAssignment {
@@ -36,7 +38,7 @@ export async function getSheetMusic(): Promise<SheetMusic[]> {
         const sheets = await getSheetsClient();
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
-            range: `${SHEET_MUSIC_SHEET}!A2:G`,
+            range: `${SHEET_MUSIC_SHEET}!A2:I`,
         });
 
         const rows = response.data.values;
@@ -50,6 +52,8 @@ export async function getSheetMusic(): Promise<SheetMusic[]> {
             genre: row[4] || "",
             pdfUrl: row[5] || "",
             notes: row[6] || "",
+            textbookId: row[7] ? Number(row[7]) : undefined,
+            orderInTextbook: row[8] ? Number(row[8]) : undefined,
         }));
 
         // キャッシュに保存
@@ -77,13 +81,15 @@ export async function saveSheetMusic(music: SheetMusic) {
             music.genre,
             music.pdfUrl || "",
             music.notes || "",
+            music.textbookId || "",
+            music.orderInTextbook || "",
         ];
 
         if (existingIndex !== -1) {
             const rowNumber = existingIndex + 2;
             await sheets.spreadsheets.values.update({
                 spreadsheetId: SPREADSHEET_ID,
-                range: `${SHEET_MUSIC_SHEET}!A${rowNumber}:G${rowNumber}`,
+                range: `${SHEET_MUSIC_SHEET}!A${rowNumber}:I${rowNumber}`,
                 valueInputOption: "USER_ENTERED",
                 requestBody: { values: [rowData] },
             });

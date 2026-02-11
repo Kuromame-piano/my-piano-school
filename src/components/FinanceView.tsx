@@ -547,7 +547,7 @@ export default function FinanceView() {
                                         <p className={`font-semibold text-sm sm:text-base ${tx.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>{tx.type === "income" ? "+" : "-"}¥{tx.amount.toLocaleString()}</p>
                                         <p className="text-xs text-t-muted">{tx.date}</p>
                                     </div>
-                                    <div className="hidden sm:flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                                         <button onClick={() => handleEditTransaction(tx)} className="p-2 hover:bg-card-border rounded-lg"><Pencil className="w-4 h-4 text-t-secondary" /></button>
                                         <button onClick={() => handleDeleteTransaction(tx.id)} className="p-2 hover:bg-rose-100 rounded-lg"><Trash2 className="w-4 h-4 text-rose-600" /></button>
                                     </div>
@@ -634,7 +634,7 @@ export default function FinanceView() {
                                 const isMemoExpanded = expandedMemos.has(key);
 
                                 return (
-                                    <div key={student.id} className={`glass-card p-0 overflow-hidden border-l-4 ${hasUnpaid ? "border-l-rose-400" : "border-l-emerald-400"}`}>
+                                    <div key={`${student.id}-${selectedYear}-${selectedMonth}`} className={`glass-card p-0 overflow-hidden border-l-4 ${hasUnpaid ? "border-l-rose-400" : "border-l-emerald-400"}`}>
                                         <div className="p-4 border-b border-gray-50 bg-white/50 flex justify-between items-start">
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
