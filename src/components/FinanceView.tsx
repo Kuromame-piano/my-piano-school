@@ -133,12 +133,17 @@ export default function FinanceView() {
             setMonthLessons(lessonEvents);
             const perLessonStudents = students.filter((s) => !s.archived && s.paymentType === "per-lesson");
 
+            const seen = new Set<string>();
             const mergedLessons: LessonPayment[] = lessonEvents
                 .map((lesson) => {
                     const student = perLessonStudents.find((s) => lesson.title.includes(s.name) || s.name.includes(lesson.title));
                     if (!student) return null;
 
                     const lessonDateStr = lesson.start.split("T")[0];
+                    const dedupeKey = `${student.id}-${lessonDateStr}`;
+                    if (seen.has(dedupeKey)) return null;
+                    seen.add(dedupeKey);
+
                     const existing = lessonData.find((p) => p.lessonDate === lessonDateStr && p.studentId === student.id);
 
                     return existing || {
@@ -734,7 +739,7 @@ export default function FinanceView() {
                                                         <div className="text-center text-xs text-t-muted py-2 border border-dashed border-gray-200 rounded-lg">レッスン記録なし</div>
                                                     ) : (
                                                         lessons.map((lesson) => (
-                                                            <div key={lesson.id} className="flex items-center justify-between group">
+                                                            <div key={`${lesson.studentId}-${lesson.lessonDate}`} className="flex items-center justify-between group">
                                                                 <div className="flex items-center gap-3">
                                                                     <div
                                                                         onClick={() => handleToggleLessonPayment(lesson)}
